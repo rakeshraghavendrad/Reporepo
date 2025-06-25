@@ -1,1 +1,4 @@
 pip install poetry --trusted-host artifactory.wellsfargo.com --index-url https://<username>:<password>@artifactory.wellsfargo.com/artifactory/api/pypi/pypi-wf-legacy-virtual/simple
+
+
+pip install poetry --trusted-host artifactory.wellsfargo.com --index-url https://<username>:<password>@artifactory.wellsfargo.com/artifactory/api/pypi/pypi-wf-legacy-virtual/simple --no-cache-dir --disable-pip-version-check
