@@ -1,4 +1,10 @@
 
+
+[global]
+index-url = https://<your-username>:<your-password>@artifactory.wellsfargo.com/artifactory/api/pypi/pypi-wf-legacy-virtual/simple
+trusted-host = artifactory.wellsfargo.com
+cert = False
+
 pip install <package-name> --index-url=http://cpvra99a0993.wellsfargo.com:8081/artifactory/api/pypi/pypi.python/simple --trusted-host=cpvra99a0993.wellsfargo.com --proxy=http://user:pass@proxy.company.com:port
 
 pip install poetry --index-url https://pypi.org/simple --trusted-host pypi.org --trusted-host files.pythonhosted.org
