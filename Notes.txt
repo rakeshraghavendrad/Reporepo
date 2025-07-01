@@ -1,19 +1,12 @@
+def _handle_file_url(self):
+    """Handle file:// URLs by converting to local path."""
+    print(f"[DEBUG] self.url = {repr(self.url)}")  # <-- diagnostic
 
+    if not self.url or not self.url.startswith("file://"):
+        raise ValueError(f"Invalid file URL provided: {self.url}")
 
-[global]
-index-url = https://<your-username>:<your-password>@artifactory.wellsfargo.com/artifactory/api/pypi/pypi-wf-legacy-virtual/simple
-trusted-host = artifactory.wellsfargo.com
-cert = False
+    parsed_url = urlparse(self.url)
+    self.file_path = unquote(parsed_url.path).strip()
 
-pip install <package-name> --index-url=http://cpvra99a0993.wellsfargo.com:8081/artifactory/api/pypi/pypi.python/simple --trusted-host=cpvra99a0993.wellsfargo.com --proxy=http://user:pass@proxy.company.com:port
-
-pip install poetry --index-url https://pypi.org/simple --trusted-host pypi.org --trusted-host files.pythonhosted.org
-
-
-
-
-
-pip install poetry --trusted-host artifactory.wellsfargo.com --index-url https://<username>:<password>@artifactory.wellsfargo.com/artifactory/api/pypi/pypi-wf-legacy-virtual/simple
-
-
-pip install poetry --trusted-host artifactory.wellsfargo.com --index-url https://<username>:<password>@artifactory.wellsfargo.com/artifactory/api/pypi/pypi-wf-legacy-virtual/simple --no-cache-dir --disable-pip-version-check
+    if os.name == 'nt' and self.file_path.startswith('/'):
+        self.file_path = self.file_path[1:]
