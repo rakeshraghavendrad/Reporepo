@@ -1,18 +1,30 @@
-from langchain.embeddings import HuggingFaceEmbeddings
+from sentence_transformers import SentenceTransformer
 from ragas.embeddings import LangchainEmbeddingsWrapper
 from ragas.metrics import SemanticSimilarity
 from ragas.types import SingleTurnSample
+from langchain.embeddings import FakeEmbeddings  # this won't be used, just for reference
 
-# Replace VertexAI with Hugging Face sentence-transformers
-embedding_model = HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2")
-evaluator_embeddings = LangchainEmbeddingsWrapper(embedding_model)
+# Initialize SentenceTransformer model directly
+model = SentenceTransformer('all-MiniLM-L6-v2')  # local model, no HF access needed
 
-# Define your sample input
+# Create a Langchain-compatible wrapper
+class CustomEmbeddingWrapper:
+    def embed_documents(self, texts):
+        return model.encode(texts).tolist()
+
+    def embed_query(self, text):
+        return model.encode([text])[0].tolist()
+
+# Wrap the custom embedding in Langchain/RAGAS-compatible wrapper
+evaluator_embeddings = LangchainEmbeddingsWrapper(CustomEmbeddingWrapper())
+
+# Define your sample
 sample = SingleTurnSample(
     response="The Eiffel Tower is located in Paris.",
     reference="The Eiffel Tower is located in Paris. It has a height of 1000ft."
 )
 
-# Use RAGAS semantic similarity scoring
-scorer = SemanticSimilarity(embeddings=LangchainEmbeddingsWrapper(evaluator_embeddings))
-await scorer.single_turn_ascore(sample)
+# Score with SemanticSimilarity
+scorer = SemanticSimilarity(embeddings=evaluator_embeddings)
+score = await scorer.single_turn_ascore(sample)
+print(score)
