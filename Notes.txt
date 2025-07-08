@@ -1,14 +1,31 @@
-from langchain.embeddings import HuggingFaceEmbeddings
+from ragas.metrics import SemanticSimilarity
 from ragas.embeddings import LangchainEmbeddingsWrapper
+from langchain.embeddings import HuggingFaceEmbeddings
+from ragas.dataset_schema import SingleTurnSample
 
-# Step 1: Initialize an embedding model
-evaluator_embedding = HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2")
+# Step 1: Define your two sentences
+sentence_1 = "The Eiffel Tower is located in Paris."
+sentence_2 = "The Eiffel Tower is located in Paris. It has a height of 1000ft."
 
-# Step 2: Wrap it
-wrapped_embedding = LangchainEmbeddingsWrapper(evaluator_embedding)
+# Step 2: Wrap into RAGAS sample
+sample = SingleTurnSample(
+    response=sentence_1,
+    reference=sentence_2
+)
 
-# Step 3: Pass to scorer
+# Step 3: Use a lightweight HF embedding model
+embedding_model = HuggingFaceEmbeddings(
+    model_name="sentence-transformers/all-MiniLM-L6-v2"
+)
+
+# Step 4: Wrap with RAGAS-compatible wrapper
+wrapped_embedding = LangchainEmbeddingsWrapper(embedding_model)
+
+# Step 5: Use RAGAS scorer
 scorer = SemanticSimilarity(embeddings=wrapped_embedding)
 
-# Step 4: Evaluate
-await scorer.single_turn_a_score(sample)
+# Step 6: Compute semantic similarity
+similarity_score = await scorer.single_turn_a_score(sample)
+
+# Step 7: Print result
+print(f"Semantic Similarity Score: {similarity_score}")
