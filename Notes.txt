@@ -1,30 +1,22 @@
 from sentence_transformers import SentenceTransformer
-from ragas.embeddings import LangchainEmbeddingsWrapper
-from ragas.metrics import SemanticSimilarity
-from ragas.types import SingleTurnSample
-from langchain.embeddings import FakeEmbeddings  # this won't be used, just for reference
+import pandas as pd
+from sklearn.metrics.pairwise import cosine_similarity
 
-# Initialize SentenceTransformer model directly
-model = SentenceTransformer('all-MiniLM-L6-v2')  # local model, no HF access needed
+# Load the model
+model = SentenceTransformer('all-MiniLM-L6-v2')  # or use 'intfloat/e5-base'
 
-# Create a Langchain-compatible wrapper
-class CustomEmbeddingWrapper:
-    def embed_documents(self, texts):
-        return model.encode(texts).tolist()
+# Sample DataFrame
+df = pd.DataFrame({
+    'A': ["The cat sits on the mat.", "A man is eating food."],
+    'B': ["A cat is on the mat.", "Someone is having a meal."]
+})
 
-    def embed_query(self, text):
-        return model.encode([text])[0].tolist()
+# Generate embeddings
+embeddings_A = model.encode(df['A'].tolist(), convert_to_tensor=True)
+embeddings_B = model.encode(df['B'].tolist(), convert_to_tensor=True)
 
-# Wrap the custom embedding in Langchain/RAGAS-compatible wrapper
-evaluator_embeddings = LangchainEmbeddingsWrapper(CustomEmbeddingWrapper())
+# Compute cosine similarity
+similarities = cosine_similarity(embeddings_A, embeddings_B).diagonal()
 
-# Define your sample
-sample = SingleTurnSample(
-    response="The Eiffel Tower is located in Paris.",
-    reference="The Eiffel Tower is located in Paris. It has a height of 1000ft."
-)
-
-# Score with SemanticSimilarity
-scorer = SemanticSimilarity(embeddings=evaluator_embeddings)
-score = await scorer.single_turn_ascore(sample)
-print(score)
+df['cosine_similarity'] = similarities
+print(df)
