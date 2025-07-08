@@ -1,12 +1,14 @@
-def _handle_file_url(self):
-    """Handle file:// URLs by converting to local path."""
-    print(f"[DEBUG] self.url = {repr(self.url)}")  # <-- diagnostic
+from langchain.embeddings import HuggingFaceEmbeddings
+from ragas.embeddings import LangchainEmbeddingsWrapper
 
-    if not self.url or not self.url.startswith("file://"):
-        raise ValueError(f"Invalid file URL provided: {self.url}")
+# Step 1: Initialize an embedding model
+evaluator_embedding = HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2")
 
-    parsed_url = urlparse(self.url)
-    self.file_path = unquote(parsed_url.path).strip()
+# Step 2: Wrap it
+wrapped_embedding = LangchainEmbeddingsWrapper(evaluator_embedding)
 
-    if os.name == 'nt' and self.file_path.startswith('/'):
-        self.file_path = self.file_path[1:]
+# Step 3: Pass to scorer
+scorer = SemanticSimilarity(embeddings=wrapped_embedding)
+
+# Step 4: Evaluate
+await scorer.single_turn_a_score(sample)
