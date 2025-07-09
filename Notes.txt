@@ -1,22 +1,64 @@
-from sentence_transformers import SentenceTransformer
-import pandas as pd
-from sklearn.metrics.pairwise import cosine_similarity
+# --- Required imports ---
+import requests
+import json
+import uuid
+import datetime
 
-# Load the model
-model = SentenceTransformer('all-MiniLM-L6-v2')  # or use 'intfloat/e5-base'
+from ragas.dataset_schema import SingleTurnSample
+from ragas.metrics import SemanticSimilarity
+from ragas.embeddings import LangchainEmbeddingsWrapper
+from langchain.embeddings.base import Embeddings
 
-# Sample DataFrame
-df = pd.DataFrame({
-    'A': ["The cat sits on the mat.", "A man is eating food."],
-    'B': ["A cat is on the mat.", "Someone is having a meal."]
-})
 
-# Generate embeddings
-embeddings_A = model.encode(df['A'].tolist(), convert_to_tensor=True)
-embeddings_B = model.encode(df['B'].tolist(), convert_to_tensor=True)
+# --- Function to call external embedding API ---
+def get_embedding(text):
+    url = "https://your-api-url.com"  # ✅ Replace with actual API URL
 
-# Compute cosine similarity
-similarities = cosine_similarity(embeddings_A, embeddings_B).diagonal()
+    payload = json.dumps({
+        "input": text,
+        "model": "<INSERT_MODEL_ID>"  # ✅ Replace with your model ID
+    })
 
-df['cosine_similarity'] = similarities
-print(df)
+    headers = {
+        "x-request-id": str(uuid.uuid4()),
+        "x-correlation-id": str(uuid.uuid4()),
+        "x-wf-client-id": "<YOUR_UID_OR_APPID>",  # ✅ Replace accordingly
+        "x-wf-request-date": datetime.datetime.now().isoformat(),
+        "Content-Type": "application/json",
+        "x-wf-api-key": "<INSERT_API_KEY>",       # ✅ Replace with your API key
+        "x-wf-usecase-id": "<INSERT_USECASE_ID>"  # ✅ Replace with use case ID
+    }
+
+    response = requests.request("POST", url, headers=headers, data=payload)
+    response.raise_for_status()  # Raise error if API call fails
+
+    # ✅ Adjust this based on your actual API response format
+    return response.json()["embedding"]
+
+
+# --- Langchain wrapper for external embedding service ---
+class CustomAPIEmbeddings(Embeddings):
+    def embed_documents(self, texts):
+        return [get_embedding(text) for text in texts]
+
+    def embed_query(self, text):
+        return get_embedding(text)
+
+
+# --- Create the sample for similarity comparison ---
+sample = SingleTurnSample(
+    response="The Eiffel Tower is located in Paris.",
+    reference="The Eiffel Tower is located in Paris. It has a height of 1000ft."
+)
+
+
+# --- Initialize the embedding model and scorer ---
+embedding_model = CustomAPIEmbeddings()
+evaluator_embedding = LangchainEmbeddingsWrapper(embedding_model)
+scorer = SemanticSimilarity(embeddings=evaluator_embedding)
+
+
+# --- Run similarity score ---
+import asyncio
+result = asyncio.run(scorer.single_turn_ascore(sample))
+print("Semantic Similarity Score:", result)
