@@ -1,12 +1,47 @@
-if schema:
-    try:
-        # Try loading JSON from the response (after cleaning)
-        json_result = json.loads(response_text.strip("```json").strip("`").strip())
-        return schema(**json_result)
-    except json.JSONDecodeError:
-        print("⚠️ Model output is not valid JSON. Returning raw response instead.")
-        print("🔎 Raw model output:\n", response_text)
-        # fallback: skip schema parsing and just return raw output
-        return response_text
-else:
-    return response_text
+from deepeval.metrics import FaithfulnessMetric
+from deepeval.test_case import LLMTestCase
+
+# ✅ Subclass FaithfulnessMetric and override the prompt
+class PatchedFaithfulnessMetric(FaithfulnessMetric):
+    def _construct_prompt(self, context, output):
+        return f"""
+Evaluate how faithful the following output is to the given context.
+
+Respond in the following strict JSON format:
+{{
+  "score": float (between 0 and 1),
+  "reason": string
+}}
+
+Context:
+{context}
+
+Output:
+{output}
+"""
+
+# ✅ Sample context/output
+actual_output = "We offer a 30-day full refund at no extra cost."
+retrieval_context = ["All customers are eligible for a 30 day full refund at no extra cost."]
+
+# ✅ Use your patched metric instead of the default one
+metric = PatchedFaithfulnessMetric(
+    threshold=0.7,
+    model="gemini-2.0-flash-001",  # or "gpt-4"
+    include_reason=True
+)
+
+test_case = LLMTestCase(
+    input="What if these shoes don't fit?",
+    actual_output=actual_output,
+    retrieval_context=retrieval_context
+)
+
+# ✅ Run the test (optionally in try/except to catch non-JSON again)
+try:
+    metric.measure(test_case)
+    print("✅ Score:", metric.score)
+    print("💬 Reason:", metric.reason)
+except ValueError as e:
+    print("❌ Model did not return valid JSON.")
+    print(e)
