@@ -1,8 +1,9 @@
 from deepeval.metrics import FaithfulnessMetric
 from deepeval.test_case import LLMTestCase
 import re
+import json
 
-# ✅ Custom FaithfulnessMetric to enforce JSON response format
+# ✅ Patched FaithfulnessMetric with forced JSON-style prompt
 class PatchedFaithfulnessMetric(FaithfulnessMetric):
     def _construct_prompt(self, context, output):
         return f"""
@@ -21,46 +22,52 @@ Output:
 "{output}"
 """
 
-# ✅ Your LLM output and context
+# ✅ Inputs
 actual_output = "We offer a 30-day full refund at no extra cost."
 retrieval_context = ["All customers are eligible for a 30 day full refund at no extra cost."]
 
-# ✅ Use the patched FaithfulnessMetric
+# ✅ Metric
 metric = PatchedFaithfulnessMetric(
     threshold=0.7,
-    model="gemini-2.0-flash-001",  # or "gpt-4"
+    model="gemini-2.0-flash-001",
     include_reason=True
 )
 
-# ✅ Define your test case
+# ✅ Test Case
 test_case = LLMTestCase(
     input="What if these shoes don't fit?",
     actual_output=actual_output,
     retrieval_context=retrieval_context
 )
 
-# ✅ Run evaluation and handle JSON + non-JSON responses
+# ✅ Run + Handle JSON + Non-JSON Outputs
 try:
-    metric.measure(test_case)
-    print("✅ Score:", getattr(metric, 'score', '❓ Not Set'))
-    print("💬 Reason:", getattr(metric, 'reason', '❓ Not Set'))
+    result = metric.measure(test_case)
+
+    # Check if result is dict-like or str
+    if isinstance(result, str):
+        print("⚠️ Received string instead of parsed JSON.")
+        print("📤 Raw model response:\n", result)
+
+        # Try to parse JSON if string looks like JSON
+        try:
+            cleaned = result.strip().strip("```json").strip("`")
+            parsed = json.loads(cleaned)
+            print("\n✅ Score:", parsed.get("score", "❓ Not Found"))
+            print("💬 Reason:", parsed.get("reason", "❓ Not Found"))
+        except:
+            # Fallback: extract with regex
+            score_match = re.search(r'score\s*(is|of|=)?\s*([0-9]\.?[0-9]*)', result, re.IGNORECASE)
+            score = float(score_match.group(2)) if score_match else "❓ Not Found"
+            reason = result.split("score")[0].strip().strip('"')
+            print("\n🔎 Extracted (from freeform text):")
+            print("✅ Score:", score)
+            print("💬 Reason:", reason)
+
+    else:
+        # If metric.score and metric.reason are set, print them
+        print("✅ Score:", getattr(metric, 'score', '❓ Not Set'))
+        print("💬 Reason:", getattr(metric, 'reason', '❓ Not Set'))
 
 except Exception as e:
-    print("❌ Model output could not be parsed as JSON.")
-    print("🔎 Error:", e)
-
-    # Get raw model output from the error
-    raw_response = e.args[0] if hasattr(e, 'args') and len(e.args) > 0 else None
-    if raw_response:
-        print("📤 Raw model response:\n", raw_response)
-
-        # ✅ Extract score using regex
-        score_match = re.search(r'score\s*(is|of|=)?\s*([0-9]\.?[0-9]*)', raw_response, re.IGNORECASE)
-        score = float(score_match.group(2)) if score_match else "❓ Not found"
-
-        # ✅ Extract reason (text before 'score')
-        reason = raw_response.split("score")[0].strip().strip('"')
-
-        print("\n🔎 Extracted values (from freeform text):")
-        print("✅ Score:", score)
-        print("💬 Reason:", reason)
+    print("❌ Unexpected error:", e)
