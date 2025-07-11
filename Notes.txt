@@ -1,64 +1,43 @@
-# --- Required imports ---
-import requests
+from deepeval import evaluate
+from deepeval.test_case import LLMTestCase
+from deepeval.metrics import FaithfulnessMetric
 import json
-import uuid
-import datetime
+import re
+import types
 
-from ragas.dataset_schema import SingleTurnSample
-from ragas.metrics import SemanticSimilarity
-from ragas.embeddings import LangchainEmbeddingsWrapper
-from langchain.embeddings.base import Embeddings
+# Monkey-patch the model's _generate method to handle non-JSON responses safely
+from deepeval.models.custom_openai_model import CustomOpenAIModel
 
+def patched_generate(self, prompt, schema=None):
+    response_text = self.model.generate_content(prompt).text
+    clean_text = re.sub(r"```json|```", "", response_text).strip()
+    try:
+        json_result = json.loads(clean_text)
+    except json.JSONDecodeError:
+        raise ValueError(f"Model output is not valid JSON:\n{response_text}")
+    return schema(**json_result)
 
-# --- Function to call external embedding API ---
-def get_embedding(text):
-    url = "https://your-api-url.com"  # ✅ Replace with actual API URL
+CustomOpenAIModel._generate = types.MethodType(patched_generate, CustomOpenAIModel)
 
-    payload = json.dumps({
-        "input": text,
-        "model": "<INSERT_MODEL_ID>"  # ✅ Replace with your model ID
-    })
+# Replace this with your actual output from the LLM
+actual_output = "We offer a 30-day full refund at no extra cost."
 
-    headers = {
-        "x-request-id": str(uuid.uuid4()),
-        "x-correlation-id": str(uuid.uuid4()),
-        "x-wf-client-id": "<YOUR_UID_OR_APPID>",  # ✅ Replace accordingly
-        "x-wf-request-date": datetime.datetime.now().isoformat(),
-        "Content-Type": "application/json",
-        "x-wf-api-key": "<INSERT_API_KEY>",       # ✅ Replace with your API key
-        "x-wf-usecase-id": "<INSERT_USECASE_ID>"  # ✅ Replace with use case ID
-    }
+# Replace this with your actual retrieved context from the RAG pipeline
+retrieval_context = ["All customers are eligible for a 30 day full refund at no extra cost."]
 
-    response = requests.request("POST", url, headers=headers, data=payload)
-    response.raise_for_status()  # Raise error if API call fails
-
-    # ✅ Adjust this based on your actual API response format
-    return response.json()["embedding"]
-
-
-# --- Langchain wrapper for external embedding service ---
-class CustomAPIEmbeddings(Embeddings):
-    def embed_documents(self, texts):
-        return [get_embedding(text) for text in texts]
-
-    def embed_query(self, text):
-        return get_embedding(text)
-
-
-# --- Create the sample for similarity comparison ---
-sample = SingleTurnSample(
-    response="The Eiffel Tower is located in Paris.",
-    reference="The Eiffel Tower is located in Paris. It has a height of 1000ft."
+# Set up the metric
+metric = FaithfulnessMetric(
+    threshold=0.7,
+    model="llm-no-ssl",  # or your model id, like "gemini-2.0-flash-001"
+    include_reason=True
 )
 
+# Define the test case
+test_case = LLMTestCase(
+    input="What if these shoes don’t fit?",
+    actual_output=actual_output,
+    retrieval_context=retrieval_context
+)
 
-# --- Initialize the embedding model and scorer ---
-embedding_model = CustomAPIEmbeddings()
-evaluator_embedding = LangchainEmbeddingsWrapper(embedding_model)
-scorer = SemanticSimilarity(embeddings=evaluator_embedding)
-
-
-# --- Run similarity score ---
-import asyncio
-result = asyncio.run(scorer.single_turn_ascore(sample))
-print("Semantic Similarity Score:", result)
+# Evaluate
+evaluate(test_cases=[test_case], metrics=[metric])
