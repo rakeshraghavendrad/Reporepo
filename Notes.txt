@@ -1,47 +1,50 @@
 from deepeval.metrics import FaithfulnessMetric
 from deepeval.test_case import LLMTestCase
 
-# ✅ Subclass FaithfulnessMetric and override the prompt
+# ✅ Override FaithfulnessMetric to control the prompt
 class PatchedFaithfulnessMetric(FaithfulnessMetric):
     def _construct_prompt(self, context, output):
         return f"""
 Evaluate how faithful the following output is to the given context.
 
-Respond in the following strict JSON format:
+Return your response in strict JSON format only:
 {{
   "score": float (between 0 and 1),
   "reason": string
 }}
 
 Context:
-{context}
+"{context}"
 
 Output:
-{output}
+"{output}"
 """
 
-# ✅ Sample context/output
+# ✅ Your inputs
 actual_output = "We offer a 30-day full refund at no extra cost."
 retrieval_context = ["All customers are eligible for a 30 day full refund at no extra cost."]
 
-# ✅ Use your patched metric instead of the default one
+# ✅ Instantiate the patched metric
 metric = PatchedFaithfulnessMetric(
     threshold=0.7,
-    model="gemini-2.0-flash-001",  # or "gpt-4"
+    model="gemini-2.0-flash-001",  # Your model
     include_reason=True
 )
 
+# ✅ Create the test case
 test_case = LLMTestCase(
     input="What if these shoes don't fit?",
     actual_output=actual_output,
     retrieval_context=retrieval_context
 )
 
-# ✅ Run the test (optionally in try/except to catch non-JSON again)
+# ✅ Run the test and safely handle failures
 try:
     metric.measure(test_case)
-    print("✅ Score:", metric.score)
-    print("💬 Reason:", metric.reason)
-except ValueError as e:
-    print("❌ Model did not return valid JSON.")
-    print(e)
+    print("✅ Score:", getattr(metric, 'score', '❓ Not Set'))
+    print("💬 Reason:", getattr(metric, 'reason', '❓ Not Set'))
+except Exception as e:
+    print("❌ Model output could not be parsed.")
+    print("🔎 Error:", e)
+    if hasattr(e, 'args') and len(e.args) > 0:
+        print("📤 Raw model response:\n", e.args[0])
