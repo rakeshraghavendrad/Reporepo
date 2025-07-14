@@ -1,22 +1,35 @@
-from deepeval.metrics import GEvalMetric
-from deepeval.test_case import LLMTestCase
-from deepeval import evaluate
 
-# 🧠 Create a custom G-Eval metric
-metric = GEvalMetric(
-    name="Helpfulness Score",
-    criteria="Is the answer helpful and clear based on the input question?",
-    evaluation_prompt="Given the input and output, evaluate how helpful the output is. Return JSON: {\"score\": float (0 to 1), \"reason\": string}",
-    model="gpt-4",
-    threshold=0.7,
-    include_reason=True
-)
+from deepeval.metrics import AnswerRelevancyMetric
+from deepeval.test_case import LLMEvalTestCase
 
-# ✅ Test Case to be evaluated
-test_case = LLMTestCase(
-    input="How can I return the shoes I ordered?",
-    actual_output="You can return the shoes within 30 days with no extra charges."
-)
+# Initialize the metric
+answer_relevancy_metric = AnswerRelevancyMetric(threshold=0.7, model=llm_no_ssl)
 
-# 🔍 Run the evaluation
-evaluate(test_cases=[test_case], metrics=[metric])
+# Function to compute relevance between evidence_run1 and evidence_run2
+def compare_evidence(row):
+    test_case = LLMEvalTestCase(
+        input=row['evidence_run1'],       # This acts as the reference
+        actual_output=row['evidence_run2']  # This is what we’re evaluating for relevance
+    )
+    answer_relevancy_metric.measure(test_case)
+    return pd.Series({
+        "relevance_score": answer_relevancy_metric.score,
+        "relevance_reason": answer_relevancy_metric.reason
+    })
+
+# Apply row-wise comparison
+df_evidence[['relevance_score', 'relevance_reason']] = df_evidence.apply(compare_evidence, axis=1)
+
+# View the result
+df_evidence.head()
+
+
+
+
+
+
+
+
+
+
+
