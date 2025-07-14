@@ -1,27 +1,33 @@
-from deepeval.metrics import ContextualPrecisionMetric
+from deepeval import evaluate
 from deepeval.test_case import LLMEvalTestCase
-import pandas as pd
+from deepeval.metrics import ContextualPrecisionMetric
+
+# Ensure expected_output is present
+df_evidence["expected_output"] = df_evidence["evidence_run1"]  # temp fix for missing ground truth
 
 # Initialize metric
-contextual_precision_metric = ContextualPrecisionMetric(
+contextual_metric = ContextualPrecisionMetric(
     threshold=0.7,
     model=llm_no_ssl,
     include_reason=True
 )
 
-# Define row-wise evaluation function
+# Row-wise application
 def apply_contextual_precision(row):
     test_case = LLMEvalTestCase(
         input="Check if the output is contextual and precise.",
         actual_output=row["evidence_run2"],
-        expected_output=row["expected_output"],       # ⚠️ Required by this metric
+        expected_output=row["expected_output"],
         retrieval_context=[row["evidence_run1"]]
     )
-    result = contextual_precision_metric.measure(test_case)
+    
+    # Use evaluate(...) to get rich result with score and reason
+    eval_result = evaluate(test_cases=[test_case], metrics=[contextual_metric])[0][0]
+    
     return pd.Series({
-        "contextual_precision_score": result.score,
-        "contextual_precision_reason": result.reason
+        "contextual_precision_score": eval_result.score,
+        "contextual_precision_reason": eval_result.reason
     })
 
-# Apply to dataframe (ensure 'expected_output' column exists!)
+# Apply to all rows
 df_evidence[["contextual_precision_score", "contextual_precision_reason"]] = df_evidence.apply(apply_contextual_precision, axis=1)
