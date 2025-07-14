@@ -1,35 +1,26 @@
 
-from deepeval.metrics import AnswerRelevancyMetric
+from deepeval.metrics import FaithfulnessMetric
 from deepeval.test_case import LLMEvalTestCase
 
 # Initialize the metric
-answer_relevancy_metric = AnswerRelevancyMetric(threshold=0.7, model=llm_no_ssl)
+faithfulness_metric = FaithfulnessMetric(
+    threshold=0.7,
+    model=llm_no_ssl,
+    include_reason=True
+)
 
-# Function to compute relevance between evidence_run1 and evidence_run2
-def compare_evidence(row):
+# Define the function to apply row-wise
+def apply_faithfulness(row):
     test_case = LLMEvalTestCase(
-        input=row['evidence_run1'],       # This acts as the reference
-        actual_output=row['evidence_run2']  # This is what we’re evaluating for relevance
+        input="Check if the following output is faithful to the provided context.",
+        actual_output=row["evidence_run2"],           # Generated or second response
+        retrieval_context=[row["evidence_run1"]]      # Ground truth or original evidence
     )
-    answer_relevancy_metric.measure(test_case)
+    faithfulness_metric.measure(test_case)
     return pd.Series({
-        "relevance_score": answer_relevancy_metric.score,
-        "relevance_reason": answer_relevancy_metric.reason
+        "faithfulness_score": faithfulness_metric.score,
+        "faithfulness_reason": faithfulness_metric.reason
     })
 
-# Apply row-wise comparison
-df_evidence[['relevance_score', 'relevance_reason']] = df_evidence.apply(compare_evidence, axis=1)
-
-# View the result
-df_evidence.head()
-
-
-
-
-
-
-
-
-
-
-
+# Apply the function row by row
+df_evidence[["faithfulness_score", "faithfulness_reason"]] = df_evidence.apply(apply_faithfulness, axis=1)
