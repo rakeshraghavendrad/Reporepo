@@ -1,26 +1,27 @@
-
-from deepeval.metrics import FaithfulnessMetric
+from deepeval.metrics import ContextualPrecisionMetric
 from deepeval.test_case import LLMEvalTestCase
+import pandas as pd
 
-# Initialize the metric
-faithfulness_metric = FaithfulnessMetric(
+# Initialize metric
+contextual_precision_metric = ContextualPrecisionMetric(
     threshold=0.7,
     model=llm_no_ssl,
     include_reason=True
 )
 
-# Define the function to apply row-wise
-def apply_faithfulness(row):
+# Define row-wise evaluation function
+def apply_contextual_precision(row):
     test_case = LLMEvalTestCase(
-        input="Check if the following output is faithful to the provided context.",
-        actual_output=row["evidence_run2"],           # Generated or second response
-        retrieval_context=[row["evidence_run1"]]      # Ground truth or original evidence
+        input="Check if the output is contextual and precise.",
+        actual_output=row["evidence_run2"],
+        expected_output=row["expected_output"],       # ⚠️ Required by this metric
+        retrieval_context=[row["evidence_run1"]]
     )
-    faithfulness_metric.measure(test_case)
+    result = contextual_precision_metric.measure(test_case)
     return pd.Series({
-        "faithfulness_score": faithfulness_metric.score,
-        "faithfulness_reason": faithfulness_metric.reason
+        "contextual_precision_score": result.score,
+        "contextual_precision_reason": result.reason
     })
 
-# Apply the function row by row
-df_evidence[["faithfulness_score", "faithfulness_reason"]] = df_evidence.apply(apply_faithfulness, axis=1)
+# Apply to dataframe (ensure 'expected_output' column exists!)
+df_evidence[["contextual_precision_score", "contextual_precision_reason"]] = df_evidence.apply(apply_contextual_precision, axis=1)
