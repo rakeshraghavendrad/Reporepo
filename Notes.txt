@@ -1,38 +1,47 @@
 import re
 import pandas as pd
 
-# Log file path
+# Define your path
 path = "C:\\Users\\kk052484\\lc...
 input_file = path + "behave_tests.log"
-output_file = path + "behave_tests_mod.log"
 
-# Define keyword and patterns (one key, multiple values)
+# Keep same structure: keyword → list of (trigger, pattern)
 kw = {
-    "Prompt on compelling photographic or email evidence returned": {
-        "patterns": {
-            "evidence": r"evidence[^\w]?=[^\w]?([^\@]+?)\x1b",
-            "input_": r"input_[^\w]?=[^\w]?([^\@]+?)\x1b",
-            "is_compelling": r"is_compelling[^\w]?=[^\w]?([^\@]+?)\x1b"
-        }
-    }
+    "Prompt on compelling photographic or email evidence returned": [
+        ("evidence", r'"([^"]+)"'),
+        ("input_", r'"([^"]+)"'),
+        ("is_compelling", r'"([^"]+)"')
+    ]
 }
 
-# Process log
 data = []
 
+# Read log file
 with open(input_file, "r", encoding="utf-8") as infile:
     lines = infile.readlines()
 
-for keyword, config in kw.items():
-    patterns = config["patterns"]
+# Process each keyword
+for keyword, trigger_patterns in kw.items():
+    match_found = False
+    row = {"check": keyword}
+
     for line in lines:
         if keyword in line:
-            row = {"check": keyword}
-            for field, pattern in patterns.items():
-                match = re.search(pattern, line)
-                row[field] = match.group(1).strip() if match else "Not found"
-            data.append(row)
-            break  # remove if you expect multiple log entries per keyword
+            values = []
+            for trigger, pattern in trigger_patterns:
+                if trigger in line:
+                    match = re.search(pattern, line)
+                    row[trigger] = match.group(1).strip() if match else "Not found"
+                else:
+                    row[trigger] = "Trigger not found"
+            match_found = True
+            break
+
+    if not match_found:
+        for trigger, _ in trigger_patterns:
+            row[trigger] = "Not available in the log, hence no evidence"
+
+    data.append(row)
 
 # Convert to DataFrame
 df = pd.DataFrame(data)
