@@ -1,52 +1,28 @@
-from PyPDF2 import PdfReader
-import io
-
-pdf_bytes = claim_data['merchantData']['raw']
-pdf_reader = PdfReader(io.BytesIO(pdf_bytes))
-text_content = "\n".join([page.extract_text() for page in pdf_reader.pages if page.extract_text()])
-
-logger.info("Extracted PDF text from merchant data for claim_id=%s:\n%s", 
-    claim_data.get('claim_id'), text_content)
-
-
-
-
-
-
-
-
-
-
-from deepeval import evaluate
-from deepeval.test_case import LLMEvalTestCase
-from deepeval.metrics import ContextualPrecisionMetric
-
-# Ensure expected_output is present
-df_evidence["expected_output"] = df_evidence["evidence_run1"]  # temp fix for missing ground truth
-
-# Initialize metric
-contextual_metric = ContextualPrecisionMetric(
-    threshold=0.7,
-    model=llm_no_ssl,
-    include_reason=True
-)
-
-# Row-wise application
-def apply_contextual_precision(row):
-    test_case = LLMEvalTestCase(
-        input="Check if the output is contextual and precise.",
-        actual_output=row["evidence_run2"],
-        expected_output=row["expected_output"],
-        retrieval_context=[row["evidence_run1"]]
-    )
-    
-    # Use evaluate(...) to get rich result with score and reason
-    eval_result = evaluate(test_cases=[test_case], metrics=[contextual_metric])[0][0]
-    
-    return pd.Series({
-        "contextual_precision_score": eval_result.score,
-        "contextual_precision_reason": eval_result.reason
-    })
-
-# Apply to all rows
-df_evidence[["contextual_precision_score", "contextual_precision_reason"]] = df_evidence.apply(apply_contextual_precision, axis=1)
+for keyword, trigger_patterns in kw.items():
+    match_found = False
+    for line in lines:
+        if keyword in line:
+            for trigger, pattern in trigger_patterns:
+                if trigger in line:
+                    match = re.search(pattern, line)
+                    if match:
+                        evidence = match.group(1).strip()
+                        is_compelling = match.group(1).strip()
+                        input_ = match.group(1).strip()
+                        data.append({
+                            "check": keyword,
+                            "input": input_,
+                            "evidence": evidence,
+                            "is_compelling": is_compelling
+                        })
+                        match_found = True
+                        break
+            if match_found:
+                break
+    if not match_found:
+        data.append({
+            "check": keyword,
+            "input": "N/A",
+            "evidence": "Not available in the log, hence no evidence",
+            "is_compelling": "N/A"
+        })
