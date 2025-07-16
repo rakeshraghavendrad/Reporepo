@@ -1,20 +1,25 @@
 import re
 
 keyword = "Prompt on compelling photographic or email evidence returned"
+matched_lines = []
 
+# Read file and store matching lines
 with open(input_file, "r", encoding="utf-8") as infile:
     lines = infile.readlines()
 
+# Step 1: Collect matching lines
 for line in lines:
     if keyword in line:
-        print("\nMatched Line:\n", line.strip())
+        matched_lines.append(line.strip())
 
-        # Correct regex patterns
-        evidence_match = re.search(r'evidence="([^"]+)"', line)
-        input_match = re.search(r'input_=(\S+\.pdf)', line)
-        is_compelling_match = re.search(r'is_compelling=(True|False)', line)
+# Step 2: Extract fields from each matched line
+for line in matched_lines:
+    print("\nMatched Line:\n", line)
 
-        # Extracted Results
-        print("evidence:", evidence_match.group(1) if evidence_match else "Not found")
-        print("input_:", input_match.group(1) if input_match else "Not found")
-        print("is_compelling:", is_compelling_match.group(1) if is_compelling_match else "Not found")
+    evidence_match = re.search(r'evidence="([^"]+)"', line)
+    input_match = re.search(r'input_=(\S+\.pdf)', line)
+    is_compelling_match = re.search(r'is_compelling=(True|False)', line)
+
+    print("evidence:", evidence_match.group(1) if evidence_match else "Not found")
+    print("input_:", input_match.group(1) if input_match else "Not found")
+    print("is_compelling:", is_compelling_match.group(1) if is_compelling_match else "Not found")
