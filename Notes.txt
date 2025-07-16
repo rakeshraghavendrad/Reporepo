@@ -1,25 +1,21 @@
 import re
 
-keyword = "Prompt on compelling photographic or email evidence returned"
-matched_lines = []
+# Function to clean ANSI escape codes
+def remove_ansi_escape(text):
+    ansi_escape = re.compile(r'\x1b\[[0-9;]*m')
+    return ansi_escape.sub('', text)
 
-# Read file and store matching lines
-with open(input_file, "r", encoding="utf-8") as infile:
-    lines = infile.readlines()
 
-# Step 1: Collect matching lines
-for line in lines:
-    if keyword in line:
-        matched_lines.append(line.strip())
+for raw_line in matched_lines:
+    line = remove_ansi_escape(raw_line)  # Remove color codes
+    print("\nCleaned Line:\n", line)
 
-# Step 2: Extract fields from each matched line
-for line in matched_lines:
-    print("\nMatched Line:\n", line)
-
+    # Apply regex patterns
     evidence_match = re.search(r'evidence="([^"]+)"', line)
     input_match = re.search(r'input_=(\S+\.pdf)', line)
     is_compelling_match = re.search(r'is_compelling=(True|False)', line)
 
+    # Display results
     print("evidence:", evidence_match.group(1) if evidence_match else "Not found")
     print("input_:", input_match.group(1) if input_match else "Not found")
     print("is_compelling:", is_compelling_match.group(1) if is_compelling_match else "Not found")
