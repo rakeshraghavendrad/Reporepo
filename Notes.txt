@@ -1,7 +1,9 @@
-kw = {
-    "Prompt on compelling photographic or email evidence returned": [
-        ("evidence", r'"([^"]+)"'),  # keep as-is if this works for you
-        ("input_", r"input_=(merchantData_document\.pdf)"),
-        ("is_compelling", r"is_compelling=(True|False)")
-    ]
-}
+import re
+
+line = 'Prompt on compelling photographic or email evidence returned claim_id=TEST-XYZ confidence_score=0.9 evidence=merchantData_document.pdf input_=merchantData_document.pdf input_kafka_topic=xyz is_compelling=True'
+
+input_match = re.search(r"input_=(merchantData_document\.pdf)", line)
+is_compelling_match = re.search(r"is_compelling=(True|False)", line)
+
+print("input_:", input_match.group(1) if input_match else "Not found")
+print("is_compelling:", is_compelling_match.group(1) if is_compelling_match else "Not found")
