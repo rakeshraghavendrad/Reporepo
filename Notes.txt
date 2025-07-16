@@ -2,10 +2,10 @@ import re
 import pandas as pd
 
 # Define your input path
-path = "C:\\Users\\kk052484\\lc..."
+path = "C:\\Users\\kk052484\\lc..."  # <- update with your full path
 input_file = path + "behave_tests.log"
 
-# Keyword → List of (field, specific pattern)
+# Keyword → List of (field name, regex pattern scoped to field)
 kw = {
     "Prompt on compelling photographic or email evidence returned": [
         ("evidence", r'evidence="([^"]+)"'),
@@ -16,20 +16,27 @@ kw = {
 
 data = []
 
-# Read file
+# Read log file
 with open(input_file, "r", encoding="utf-8") as infile:
     lines = infile.readlines()
 
-# Loop through keywords and field-patterns
+# Loop through keywords and extract each field
 for keyword, field_patterns in kw.items():
     match_found = False
     row = {"check": keyword}
 
     for line in lines:
         if keyword in line:
+            print(f"\n✔ Matched line:\n{line.strip()}\n")  # Optional debug print
             for field, pattern in field_patterns:
                 match = re.search(pattern, line)
-                row[field] = match.group(1).strip() if match else "Not found"
+                if match:
+                    value = match.group(1).strip()
+                    row[field] = value
+                    print(f"{field} ➤ {value}")  # Optional debug print
+                else:
+                    row[field] = "Not found"
+                    print(f"{field} ➤ Not found")  # Optional debug print
             match_found = True
             break
 
@@ -41,4 +48,10 @@ for keyword, field_patterns in kw.items():
 
 # Create DataFrame
 df = pd.DataFrame(data)
+
+# Display or save result
+print("\n📊 Extracted DataFrame:")
 print(df)
+
+# Optional: Save to CSV
+# df.to_csv("extracted_log_data.csv", index=False)
