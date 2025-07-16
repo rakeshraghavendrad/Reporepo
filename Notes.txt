@@ -1,1 +1,13 @@
-evidence_match = re.search(r'evidence="([^"]+)"', line)
+import re
+
+line = 'Prompt on compelling photographic or email evidence returned claim_id=TEST-XYZ confidence_score=0.9 evidence=The AVS code is Y, which means the address and zip code match. The merchant also provided proof of delivery. input_=merchantData_document.pdf input_kafka_topic=xyz is_compelling=True'
+
+# Correct patterns
+evidence_match = re.search(r"evidence=([^=]+?)\s+input_=", line)
+input_match = re.search(r"input_=(merchantData_document\.pdf)", line)
+is_compelling_match = re.search(r"is_compelling=(True|False)", line)
+
+# Results
+print("evidence:", evidence_match.group(1).strip() if evidence_match else "Not found")
+print("input_:", input_match.group(1) if input_match else "Not found")
+print("is_compelling:", is_compelling_match.group(1) if is_compelling_match else "Not found")
