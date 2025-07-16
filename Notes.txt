@@ -1,28 +1,39 @@
-for keyword, trigger_patterns in kw.items():
-    match_found = False
+import re
+import pandas as pd
+
+# Log file path
+path = "C:\\Users\\kk052484\\lc...
+input_file = path + "behave_tests.log"
+output_file = path + "behave_tests_mod.log"
+
+# Define keyword and patterns (one key, multiple values)
+kw = {
+    "Prompt on compelling photographic or email evidence returned": {
+        "patterns": {
+            "evidence": r"evidence[^\w]?=[^\w]?([^\@]+?)\x1b",
+            "input_": r"input_[^\w]?=[^\w]?([^\@]+?)\x1b",
+            "is_compelling": r"is_compelling[^\w]?=[^\w]?([^\@]+?)\x1b"
+        }
+    }
+}
+
+# Process log
+data = []
+
+with open(input_file, "r", encoding="utf-8") as infile:
+    lines = infile.readlines()
+
+for keyword, config in kw.items():
+    patterns = config["patterns"]
     for line in lines:
         if keyword in line:
-            for trigger, pattern in trigger_patterns:
-                if trigger in line:
-                    match = re.search(pattern, line)
-                    if match:
-                        evidence = match.group(1).strip()
-                        is_compelling = match.group(1).strip()
-                        input_ = match.group(1).strip()
-                        data.append({
-                            "check": keyword,
-                            "input": input_,
-                            "evidence": evidence,
-                            "is_compelling": is_compelling
-                        })
-                        match_found = True
-                        break
-            if match_found:
-                break
-    if not match_found:
-        data.append({
-            "check": keyword,
-            "input": "N/A",
-            "evidence": "Not available in the log, hence no evidence",
-            "is_compelling": "N/A"
-        })
+            row = {"check": keyword}
+            for field, pattern in patterns.items():
+                match = re.search(pattern, line)
+                row[field] = match.group(1).strip() if match else "Not found"
+            data.append(row)
+            break  # remove if you expect multiple log entries per keyword
+
+# Convert to DataFrame
+df = pd.DataFrame(data)
+print(df)
