@@ -1,12 +1,7 @@
-import re
-
-line = 'Prompt on compelling photographic or email evidence returned claim_id=TEST-6FA6F346 confidence_score=0.9 evidence=merchantData_document.pdf input_=merchantData_document.pdf is_compelling=True'
-
-# Patterns
-evidence_match = re.search(r"evidence=([^\s]+)", line)
-input_match = re.search(r"input_=([^\s]+)", line)
-is_compelling_match = re.search(r"is_compelling=([^\s]+)", line)
-
-print("evidence:", evidence_match.group(1) if evidence_match else "not found")
-print("input_:", input_match.group(1) if input_match else "not found")
-print("is_compelling:", is_compelling_match.group(1) if is_compelling_match else "not found")
+kw = {
+    "Prompt on compelling photographic or email evidence returned": [
+        ("evidence", r"evidence=([^\s]+)"),
+        ("input_", r"input_=([^\s]+)"),
+        ("is_compelling", r"is_compelling=([^\s]+)")
+    ]
+}
