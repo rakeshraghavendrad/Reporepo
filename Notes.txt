@@ -1,1 +1,7 @@
-re.search(r'"evidence=([^\s]+)"', line)
+kw = {
+    "Prompt on compelling photographic or email evidence returned": [
+        ("evidence", r'"([^"]+)"'),  # keep as-is if this works for you
+        ("input_", r"input_=(merchantData_document\.pdf)"),
+        ("is_compelling", r"is_compelling=(True|False)")
+    ]
+}
