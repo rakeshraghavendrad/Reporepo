@@ -1,16 +1,20 @@
 import re
 
-# Sample log line
-line = '''Prompt on compelling photographic or email evidence returned claim_id=TEST-6F46F346 confidence_score=0.9 evidence="The AVS code is Y, which means the address and zip code match. The merchant also provided proof of delivery showing that the products were successfully delivered to the customer's address and not refused." input_=merchantData_document.pdf input_kafka_offset=60 input_kafka_partition=0 input_kafka_topic=... is_compelling=True'''
+keyword = "Prompt on compelling photographic or email evidence returned"
 
-line = line.strip()
+with open(input_file, "r", encoding="utf-8") as infile:
+    lines = infile.readlines()
 
-# Corrected patterns
-evidence_match = re.search(r'evidence="([^"]+)"', line)
-input_match = re.search(r'input_=(\S+\.pdf)', line)
-is_compelling_match = re.search(r'is_compelling=(True|False)', line)
+for line in lines:
+    if keyword in line:
+        print("\nMatched Line:\n", line.strip())
 
-# Results
-print("evidence:", evidence_match.group(1) if evidence_match else "Not found")
-print("input_:", input_match.group(1) if input_match else "Not found")
-print("is_compelling:", is_compelling_match.group(1) if is_compelling_match else "Not found")
+        # Correct regex patterns
+        evidence_match = re.search(r'evidence="([^"]+)"', line)
+        input_match = re.search(r'input_=(\S+\.pdf)', line)
+        is_compelling_match = re.search(r'is_compelling=(True|False)', line)
+
+        # Extracted Results
+        print("evidence:", evidence_match.group(1) if evidence_match else "Not found")
+        print("input_:", input_match.group(1) if input_match else "Not found")
+        print("is_compelling:", is_compelling_match.group(1) if is_compelling_match else "Not found")
