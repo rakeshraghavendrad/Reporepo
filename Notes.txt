@@ -1,7 +1,7 @@
 kw = {
     "Prompt on compelling photographic or email evidence returned": [
-        ("evidence", r"evidence=([^\s]+)"),
-        ("input_", r"(input_=[^\s]+)"),  # Now we capture `input_` field properly
-        ("is_compelling", r"is_compelling=([^\s]+)")
+        ("evidence", r'evidence=([^\s]+)'),
+        ("input_", r'input_=([^\s]+)'),
+        ("is_compelling", r'is_compelling=([^\s]+)')
     ]
 }
