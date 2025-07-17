@@ -1,3 +1,11 @@
+
+input_match = re.search(r'input=(\{.*?\}|\S+)', line, re.DOTALL)
+
+
+
+
+
+
 # Initialize
 records = []
 current_claim_data = "Not found"  # Holds the last seen claim_data PDF filename
