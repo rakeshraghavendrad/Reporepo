@@ -1,44 +1,30 @@
 import pandas as pd
-import asyncio
 from ragas.dataset_schema import SingleTurnSample
 from ragas.metrics import SemanticSimilarity
 from ragas.embeddings import LangchainEmbeddingsWrapper
 
-# Define or import your embedding model
-# For example:
-# from langchain.embeddings import OpenAIEmbeddings
-# evaluator_embedding = OpenAIEmbeddings()
-
-# Wrap it
+# Set up your embedding wrapper (assumes you already have evaluator_embedding)
 embedding_wrapper = LangchainEmbeddingsWrapper(evaluator_embedding)
-
-# Create the scorer
 scorer = SemanticSimilarity(embeddings=embedding_wrapper)
 
-# Your DataFrame with text columns
-df = pd.DataFrame({
-    "run1": [
-        "The Eiffel Tower is located in Paris.",
-        "Mount Everest is the tallest mountain in the world."
-    ],
-    "run2": [
-        "The Eiffel Tower is located in Paris. It has a height of 1000ft.",
-        "Mount Everest is the highest mountain with a height of 8848m."
-    ]
-})
+# Example dataframe (or use your own)
+# df = pd.read_csv("your_file.csv")  # if you're loading from a file
+# Make sure these column names match your actual dataframe
+# For example:
+# df.columns = ["evidence_run1", "evidence_run2"]
 
-# Async function to score all rows
-async def add_semantic_similarity_scores(df):
-    scores = []
-    for i, row in df.iterrows():
-        sample = SingleTurnSample(response=row["run1"], reference=row["run2"])
-        score = await scorer.single_turn_ascore(sample)
-        scores.append(score)
-    df["ragas_semanticsimilarity"] = scores
-    return df
+# Loop through rows and compute the semantic similarity
+scores = []
+for i, row in df.iterrows():
+    sample = SingleTurnSample(
+        response=row["evidence_run1"],
+        reference=row["evidence_run2"]
+    )
+    score = scorer.single_turn_score(sample)
+    scores.append(score)
 
-# Run the async function
-df = asyncio.run(add_semantic_similarity_scores(df))
+# Add result to the dataframe
+df["ragas_semanticsimilarity"] = scores
 
-# See result
+# Done! You can display or save the dataframe now
 print(df)
