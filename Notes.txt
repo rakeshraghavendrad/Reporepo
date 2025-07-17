@@ -1,9 +1,40 @@
+import pandas as pd
+import asyncio
+from ragas.dataset_schema import SingleTurnSample
+from ragas.metrics import SemanticSimilarity
+from ragas.embeddings import LangchainEmbeddingsWrapper
 
-Model Governance – 07/17/2025
-	1.	In September, we can expect some updates to the prompt based on feedback from Ryan Leed.
-	2.	The deployed model includes five categories. What changes can we expect? What is the final decision for the customer? For timeout cases, we excluded those where the customer was not in contact with the agent. The rest are considered “present,” excluding the timeout cases.
-	3.	Feedback, including written responses from agents and AI analysis, was reviewed and summarized by Ryan.
-	4.	Is there a possibility for Ryan to share the outcomes of the analysis?
-	5.	Examples of evidence provided by agents were reviewed. It seems they pertain only to Apple.
-	6.	Merchant-wise categorization (e.g., based on decision outcomes) was discussed.
-	7.	Parvathi will send out the tracker Excel sheet across teams to ensure all members have access.
+# Your evaluator embedding (already defined)
+# evaluator_embedding = ... (you need to define or import this)
+
+# Example DataFrame
+df = pd.DataFrame({
+    "run1": [
+        "The Eiffel Tower is located in Paris.",
+        "Mount Everest is the tallest mountain in the world."
+    ],
+    "run2": [
+        "The Eiffel Tower is located in Paris. It has a height of 1000ft.",
+        "Mount Everest is the highest mountain with a height of 8848m."
+    ]
+})
+
+# Setup the scorer
+scorer = SemanticSimilarity(embeddings=LangchainEmbeddingsWrapper(evaluator_embedding))
+
+# Async function to process a single row
+async def score_row(response, reference):
+    sample = SingleTurnSample(response=response, reference=reference)
+    return await scorer.single_turn_ascore(sample)
+
+# Wrapper to score all rows
+async def compute_semantic_similarity(df):
+    tasks = [score_row(row["run1"], row["run2"]) for _, row in df.iterrows()]
+    scores = await asyncio.gather(*tasks)
+    df["ragas_semanticsimilarity"] = scores
+    return df
+
+# Run the async task and get the final DataFrame
+df_result = asyncio.run(compute_semantic_similarity(df))
+
+print(df_result)
