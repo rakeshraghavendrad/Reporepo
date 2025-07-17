@@ -1,32 +1,11 @@
-import pandas as pd
-import json
-
-# Example setup
-# d_final = pd.read_csv("your_file.csv")
-keyword_column = 'keyword'
-input_column = 'input'
+# Step 1: Define the keyword to match
 target_keyword = 'Generated summary of compelling evidence'
 
-# Function to extract user content
-def extract_user_contents(json_str):
-    try:
-        # If it's a string literal with nested quotes, fix it
-        if isinstance(json_str, str):
-            # Try to clean double-encoded JSON
-            json_str = json_str.strip().replace('\\"', '"')
-            data = json.loads(json_str)
-        else:
-            return None
-        
-        # Extract 'user' role content
-        if isinstance(data, list):
-            return '\n\n'.join(
-                d.get('content', '') for d in data if d.get('role') == 'user'
-            )
-    except Exception as e:
-        print("Error parsing JSON:", e)
-        return None
+# Step 2: Filter the row
+row = d_final[d_final['keyword'] == target_keyword]
 
-# Apply function directly using .loc to avoid SettingWithCopyWarning
-mask = d_final[keyword_column] == target_keyword
-d_final.loc[mask, 'extracted_user_content'] = d_final.loc[mask, input_column].apply(extract_user_contents)
+# Step 3: Extract the 'input' value (assume only one match)
+input_json_string = row['input'].values[0]
+
+# Step 4 (optional): Print it to confirm
+print(input_json_string)
