@@ -1,18 +1,2 @@
-# Replace 'your_dataframe' with the actual name of your dataframe, e.g., df
-mask = your_dataframe['keyword'].str.contains("Generated summary of compelling evidence", na=False)
-your_dataframe.loc[mask, 'input'] = your_dataframe.loc[mask, 'input_1']
 
-
-
-
-
-import re
-
-pattern = r'input=\s*(\[\{.*?\}\])'
-match = re.search(pattern, text, re.DOTALL)
-
-if match:
-    extracted_input = match.group(1)
-    print(extracted_input)
-else:
-    print("No match found.")
+match = re.search(r'input=([^\x1b]+?)(?=\x1b|\s\w+=)', log_line)
