@@ -1,2 +1,25 @@
+import pandas as pd
+import json
 
-input=([^\s]+\.pdf[^\x1b]*)
+# Set your column names and keyword
+keyword_column = 'keyword'
+input_column = 'input'  # The column that contains the JSON string
+target_keyword = 'Generated summary of compelling evidence'
+
+# Filter for rows matching the keyword
+mask = df[keyword_column] == target_keyword
+filtered_input = df.loc[mask, input_column]
+
+# Extract only 'user' role content
+def extract_user_content(json_str):
+    try:
+        data = json.loads(json_str)
+        if isinstance(data, list):
+            return '\n\n'.join(
+                d.get('content', '') for d in data if d.get('role') == 'user'
+            )
+    except (json.JSONDecodeError, TypeError):
+        return None
+
+# Apply the function to the filtered rows
+df.loc[mask, 'extracted_user_content'] = filtered_input.apply(extract_user_content)
