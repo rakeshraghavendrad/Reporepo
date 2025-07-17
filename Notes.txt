@@ -1,11 +1,19 @@
-# Step 1: Define the keyword to match
+import pandas as pd
+
+# Step 1: Define keyword and column names
 target_keyword = 'Generated summary of compelling evidence'
+keyword_column = 'keyword'
+input_column = 'input'
 
-# Step 2: Filter the row
-row = d_final[d_final['keyword'] == target_keyword]
+# Step 2: Filter rows where 'keyword' contains the text
+mask = d_final[keyword_column].str.contains(target_keyword, case=False, na=False)
+filtered_rows = d_final[mask]
 
-# Step 3: Extract the 'input' value (assume only one match)
-input_json_string = row['input'].values[0]
-
-# Step 4 (optional): Print it to confirm
-print(input_json_string)
+# Step 3: Check if any row matched
+if not filtered_rows.empty:
+    # Just take the first matching row for now
+    input_json_string = filtered_rows.iloc[0][input_column]
+    print("✅ Found matching input:")
+    print(input_json_string)
+else:
+    print("❌ No matching rows found for keyword:", target_keyword)
