@@ -1,25 +1,32 @@
 import pandas as pd
 import json
 
-# Set your column names and keyword
+# Example setup
+# d_final = pd.read_csv("your_file.csv")
 keyword_column = 'keyword'
-input_column = 'input'  # The column that contains the JSON string
+input_column = 'input'
 target_keyword = 'Generated summary of compelling evidence'
 
-# Filter for rows matching the keyword
-mask = df[keyword_column] == target_keyword
-filtered_input = df.loc[mask, input_column]
-
-# Extract only 'user' role content
-def extract_user_content(json_str):
+# Function to extract user content
+def extract_user_contents(json_str):
     try:
-        data = json.loads(json_str)
+        # If it's a string literal with nested quotes, fix it
+        if isinstance(json_str, str):
+            # Try to clean double-encoded JSON
+            json_str = json_str.strip().replace('\\"', '"')
+            data = json.loads(json_str)
+        else:
+            return None
+        
+        # Extract 'user' role content
         if isinstance(data, list):
             return '\n\n'.join(
                 d.get('content', '') for d in data if d.get('role') == 'user'
             )
-    except (json.JSONDecodeError, TypeError):
+    except Exception as e:
+        print("Error parsing JSON:", e)
         return None
 
-# Apply the function to the filtered rows
-df.loc[mask, 'extracted_user_content'] = filtered_input.apply(extract_user_content)
+# Apply function directly using .loc to avoid SettingWithCopyWarning
+mask = d_final[keyword_column] == target_keyword
+d_final.loc[mask, 'extracted_user_content'] = d_final.loc[mask, input_column].apply(extract_user_contents)
