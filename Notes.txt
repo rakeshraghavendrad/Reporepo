@@ -1,2 +1,2 @@
 
-match = re.search(r'input=([^\x1b]+?)(?=\x1b|\s\w+=)', log_line)
+input=([^\s]+\.pdf[^\x1b]*)
