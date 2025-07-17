@@ -1,46 +1,9 @@
-import ast
 
-# Get all unique claim PDFs
-unique_claims = df['claim_data'].unique()
-
-# Define your target keyword (or make this a list if there are multiple)
-target_keyword = 'Generated summary of compeling evidence'
-keyword_column = 'keyword'
-input_column = 'input'
-
-# Loop over each unique claim_data
-for claim in unique_claims:
-    # Filter rows matching the claim_data and keyword
-    mask = (df['claim_data'] == claim) & (df[keyword_column].str.contains(target_keyword, case=False, na=False))
-    filtered_rows = df.loc[mask]
-
-    if not filtered_rows.empty:
-        # Take first matching row
-        input_json_string = filtered_rows.iloc[0][input_column]
-        print(f"Processing: {claim}")
-
-        try:
-            parsed_json = ast.literal_eval(input_json_string)
-            # Extract 'user' role contents
-            user_contents = [item['content'] for item in parsed_json if item.get('role') == 'user']
-
-            # Extract up to 3 user contents
-            user_content_1 = user_contents[0] if len(user_contents) > 0 else None
-            user_content_2 = user_contents[1] if len(user_contents) > 1 else None
-            user_content_3 = user_contents[2] if len(user_contents) > 2 else None
-
-            # Concatenate them with newline separator
-            overall = "\n1. " + user_content_1
-            if user_content_2:
-                overall += "\n2. " + user_content_2
-            if user_content_3:
-                overall += "\n3. " + user_content_3
-
-            # Update the input column for this row
-            df.loc[mask, input_column] = overall
-
-        except Exception as e:
-            print(f"Error processing {claim}: {e}")
-
-    else:
-        print(f"No matching keyword found for: {claim}")
+Model Governance – 07/17/2025
+	1.	In September, we can expect some updates to the prompt based on feedback from Ryan Leed.
+	2.	The deployed model includes five categories. What changes can we expect? What is the final decision for the customer? For timeout cases, we excluded those where the customer was not in contact with the agent. The rest are considered “present,” excluding the timeout cases.
+	3.	Feedback, including written responses from agents and AI analysis, was reviewed and summarized by Ryan.
+	4.	Is there a possibility for Ryan to share the outcomes of the analysis?
+	5.	Examples of evidence provided by agents were reviewed. It seems they pertain only to Apple.
+	6.	Merchant-wise categorization (e.g., based on decision outcomes) was discussed.
+	7.	Parvathi will send out the tracker Excel sheet across teams to ensure all members have access.
