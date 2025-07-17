@@ -1,12 +1,5 @@
-# Filter only items with role 'user'
-user_contents = [item['content'] for item in parsed_json if item.get('role') == 'user']
+# Identify the row to update based on keyword
+mask = d_final['keyword'] == target_keyword
 
-# Save to separate variables (if 3 are available)
-user_content_1 = user_contents[0] if len(user_contents) > 0 else None
-user_content_2 = user_contents[1] if len(user_contents) > 1 else None
-user_content_3 = user_contents[2] if len(user_contents) > 2 else None
-
-print("User Content 1:\n", user_content_1)
-print("\nUser Content 2:\n", user_content_2)
-print("\nUser Content 3:\n", user_content_3)
-
+# Replace the input column value in-place with the cleaned 'overall' text
+d_final.loc[mask, 'input'] = overall
