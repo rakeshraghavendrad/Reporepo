@@ -1,5 +1,46 @@
-# Identify the row to update based on keyword
-mask = d_final['keyword'] == target_keyword
+import ast
 
-# Replace the input column value in-place with the cleaned 'overall' text
-d_final.loc[mask, 'input'] = overall
+# Get all unique claim PDFs
+unique_claims = df['claim_data'].unique()
+
+# Define your target keyword (or make this a list if there are multiple)
+target_keyword = 'Generated summary of compeling evidence'
+keyword_column = 'keyword'
+input_column = 'input'
+
+# Loop over each unique claim_data
+for claim in unique_claims:
+    # Filter rows matching the claim_data and keyword
+    mask = (df['claim_data'] == claim) & (df[keyword_column].str.contains(target_keyword, case=False, na=False))
+    filtered_rows = df.loc[mask]
+
+    if not filtered_rows.empty:
+        # Take first matching row
+        input_json_string = filtered_rows.iloc[0][input_column]
+        print(f"Processing: {claim}")
+
+        try:
+            parsed_json = ast.literal_eval(input_json_string)
+            # Extract 'user' role contents
+            user_contents = [item['content'] for item in parsed_json if item.get('role') == 'user']
+
+            # Extract up to 3 user contents
+            user_content_1 = user_contents[0] if len(user_contents) > 0 else None
+            user_content_2 = user_contents[1] if len(user_contents) > 1 else None
+            user_content_3 = user_contents[2] if len(user_contents) > 2 else None
+
+            # Concatenate them with newline separator
+            overall = "\n1. " + user_content_1
+            if user_content_2:
+                overall += "\n2. " + user_content_2
+            if user_content_3:
+                overall += "\n3. " + user_content_3
+
+            # Update the input column for this row
+            df.loc[mask, input_column] = overall
+
+        except Exception as e:
+            print(f"Error processing {claim}: {e}")
+
+    else:
+        print(f"No matching keyword found for: {claim}")
