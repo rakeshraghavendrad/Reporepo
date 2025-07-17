@@ -1,3 +1,9 @@
+# Replace 'your_dataframe' with the actual name of your dataframe, e.g., df
+mask = your_dataframe['keyword'].str.contains("Generated summary of compelling evidence", na=False)
+your_dataframe.loc[mask, 'input'] = your_dataframe.loc[mask, 'input_1']
+
+
+
 
 
 import re
