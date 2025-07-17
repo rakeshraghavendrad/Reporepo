@@ -4,10 +4,18 @@ from ragas.dataset_schema import SingleTurnSample
 from ragas.metrics import SemanticSimilarity
 from ragas.embeddings import LangchainEmbeddingsWrapper
 
-# Your evaluator embedding (already defined)
-# evaluator_embedding = ... (you need to define or import this)
+# Define or import your embedding model
+# For example:
+# from langchain.embeddings import OpenAIEmbeddings
+# evaluator_embedding = OpenAIEmbeddings()
 
-# Example DataFrame
+# Wrap it
+embedding_wrapper = LangchainEmbeddingsWrapper(evaluator_embedding)
+
+# Create the scorer
+scorer = SemanticSimilarity(embeddings=embedding_wrapper)
+
+# Your DataFrame with text columns
 df = pd.DataFrame({
     "run1": [
         "The Eiffel Tower is located in Paris.",
@@ -19,22 +27,18 @@ df = pd.DataFrame({
     ]
 })
 
-# Setup the scorer
-scorer = SemanticSimilarity(embeddings=LangchainEmbeddingsWrapper(evaluator_embedding))
-
-# Async function to process a single row
-async def score_row(response, reference):
-    sample = SingleTurnSample(response=response, reference=reference)
-    return await scorer.single_turn_ascore(sample)
-
-# Wrapper to score all rows
-async def compute_semantic_similarity(df):
-    tasks = [score_row(row["run1"], row["run2"]) for _, row in df.iterrows()]
-    scores = await asyncio.gather(*tasks)
+# Async function to score all rows
+async def add_semantic_similarity_scores(df):
+    scores = []
+    for i, row in df.iterrows():
+        sample = SingleTurnSample(response=row["run1"], reference=row["run2"])
+        score = await scorer.single_turn_ascore(sample)
+        scores.append(score)
     df["ragas_semanticsimilarity"] = scores
     return df
 
-# Run the async task and get the final DataFrame
-df_result = asyncio.run(compute_semantic_similarity(df))
+# Run the async function
+df = asyncio.run(add_semantic_similarity_scores(df))
 
-print(df_result)
+# See result
+print(df)
