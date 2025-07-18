@@ -1,47 +1,37 @@
 import ast
 import pandas as pd
 
-# Sample: unique claims
-unique_claims = df['claim_data'].unique()
+# Step 1: Make sure 'defined_input' column exists
+df['defined_input'] = None
 
-# Your target keyword
+# Step 2: Define your keyword and relevant columns
 target_keyword = 'Generated summary of compelling evidence'
 keyword_column = 'keyword'
 input_column = 'input'
 
-# Step 1: Create a mask for rows that contain the target keyword
+# Step 3: Identify matching rows
 mask = df[keyword_column].str.contains(target_keyword, case=False, na=False)
 
-# Step 2: Loop through each claim
-for claim in unique_claims:
-    # Get rows matching the current claim AND keyword
-    matching_row = df[(df['claim_data'] == claim) & mask]
+# Step 4: Loop through only the matching rows
+for idx, row in df[mask].iterrows():
+    input_json_string = row[input_column]
 
-    if not matching_row.empty:
-        # Extract the input column JSON string
-        input_json_string = matching_row.iloc[0][input_column]
-        print("Found matching input.")
-
-        # Parse the JSON string
+    try:
+        # Parse JSON
         parsed_json = ast.literal_eval(input_json_string)
 
-        # Extract 'user' role content
+        # Get only the 'user' messages
         user_contents = [item['content'] for item in parsed_json if item.get('role') == 'user']
 
-        # Extract up to 3 content segments
-        user_content_1 = user_contents[0] if len(user_contents) > 0 else None
-        user_content_2 = user_contents[1] if len(user_contents) > 1 else None
-        user_content_3 = user_contents[2] if len(user_contents) > 2 else None
+        # Format output
+        output_parts = []
+        for i, content in enumerate(user_contents[:3]):
+            output_parts.append(f"{i+1}. {content}")
 
-        # Build the cleaned overall content
-        overall = ""
-        if user_content_1:
-            overall += "1. " + user_content_1
-        if user_content_2:
-            overall += "\n2. " + user_content_2
-        if user_content_3:
-            overall += "\n3. " + user_content_3
+        overall = "\n".join(output_parts)
 
-        # Step 3: Update ONLY the matching row's input column
-        row_index = matching_row.index[0]  # Use .index to find row in original df
-        df.loc[row_index, input_column] = overall
+        # Assign to new column
+        df.loc[idx, 'defined_input'] = overall
+
+    except (ValueError, SyntaxError):
+        df.loc[idx, 'defined_input'] = "Invalid JSON"
