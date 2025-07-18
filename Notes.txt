@@ -1,44 +1,33 @@
-import pandas as pd
 import ast
 
-# Get unique claim_data values
+target_keyword = 'Generated summary of compelling evidence'
+keyword_column = 'keyword'
+input_column = 'input'
+
+mask = df[keyword_column].str.contains(target_keyword, case=False, na=False)
+filtered_rows = df[mask]
 unique_claims = df['claim_data'].unique()
 
-# Loop through each claim_data
 for claim in unique_claims:
-    # Filter all rows for this claim
-    claim_rows = df[df['claim_data'] == claim]
+    matching_row = filtered_rows[filtered_rows['claim_data'] == claim]
 
-    # Loop through each row for this claim
-    for idx, row in claim_rows.iterrows():
-        input_raw = row['input']
-        keyword = row['keyword']
+    if not matching_row.empty:
+        input_json_string = matching_row.iloc[0][input_column]
+        print("Found matching input:")
+        
+        # Safely parse JSON-like string
+        parsed_json = ast.literal_eval(input_json_string)
+        
+        # Extract only 'user' role contents
+        user_contents = [item['content'] for item in parsed_json if item.get('role') == 'user']
 
-        try:
-            # Try to parse the input as a list of dicts
-            parsed_json = ast.literal_eval(input_raw)
+        # Assign only if enough contents
+        user_content_1 = user_contents[0] if len(user_contents) > 0 else ''
+        user_content_2 = user_contents[1] if len(user_contents) > 1 else ''
+        user_content_3 = user_contents[2] if len(user_contents) > 2 else ''
 
-            # Check if it's a list of messages with 'role' and 'content'
-            if isinstance(parsed_json, list) and all(isinstance(item, dict) for item in parsed_json):
-                user_contents = [item['content'] for item in parsed_json if item.get('role') == 'user']
+        # Safe concatenation (skip empty strings)
+        overall = "\n\n".join(filter(None, [user_content_1, user_content_2, user_content_3]))
 
-                # Extract up to 3 user contents
-                user_content_1 = user_contents[0] if len(user_contents) > 0 else None
-                user_content_2 = user_contents[1] if len(user_contents) > 1 else None
-                user_content_3 = user_contents[2] if len(user_contents) > 2 else None
-
-                # Build the overall formatted string
-                overall = ""
-                if user_content_1:
-                    overall += "1. " + user_content_1
-                if user_content_2:
-                    overall += "\n2. " + user_content_2
-                if user_content_3:
-                    overall += "\n3. " + user_content_3
-
-                # Update the input in the DataFrame
-                df.at[idx, 'input'] = overall
-
-        except Exception as e:
-            # If input is not JSON-parsable, skip
-            print(f"Skipping row {idx} for claim {claim}: {e}")
+        # Update original dataframe
+        df.loc[df[keyword_column] == target_keyword, input_column] = overall
