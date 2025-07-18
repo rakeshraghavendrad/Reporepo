@@ -1,37 +1,46 @@
 import ast
 import pandas as pd
 
-# Step 1: Make sure 'defined_input' column exists
-df['defined_input'] = None
+# 1. Get all unique claims
+unique_claims = df['claim_data'].unique()
 
-# Step 2: Define your keyword and relevant columns
+# 2. Keyword to filter by
 target_keyword = 'Generated summary of compelling evidence'
 keyword_column = 'keyword'
 input_column = 'input'
 
-# Step 3: Identify matching rows
+# 3. Filter rows by keyword
 mask = df[keyword_column].str.contains(target_keyword, case=False, na=False)
+filtered_rows = df[mask]
 
-# Step 4: Loop through only the matching rows
-for idx, row in df[mask].iterrows():
-    input_json_string = row[input_column]
+# 4. Create new column to store cleaned text
+df['defined_input'] = None
 
-    try:
-        # Parse JSON
-        parsed_json = ast.literal_eval(input_json_string)
+# 5. Loop through each claim
+for claim in unique_claims:
+    matching_row = filtered_rows[filtered_rows['claim_data'] == claim]
 
-        # Get only the 'user' messages
-        user_contents = [item['content'] for item in parsed_json if item.get('role') == 'user']
+    if not matching_row.empty:
+        row_index = matching_row.index[0]  # get exact row index in original df
+        input_json_string = matching_row.iloc[0][input_column]
 
-        # Format output
-        output_parts = []
-        for i, content in enumerate(user_contents[:3]):
-            output_parts.append(f"{i+1}. {content}")
+        try:
+            # Safely parse the JSON-like string
+            parsed_json = ast.literal_eval(input_json_string)
 
-        overall = "\n".join(output_parts)
+            # Get only 'user' role messages
+            user_contents = [item['content'] for item in parsed_json if item.get('role') == 'user']
 
-        # Assign to new column
-        df.loc[idx, 'defined_input'] = overall
+            # Format with 1., 2., 3.
+            formatted = ""
+            for i, content in enumerate(user_contents[:3]):
+                formatted += f"{i+1}. {content}\n"
 
-    except (ValueError, SyntaxError):
-        df.loc[idx, 'defined_input'] = "Invalid JSON"
+            # Assign to new column
+            df.at[row_index, 'defined_input'] = formatted.strip()
+
+        except Exception as e:
+            print(f"Error parsing row {row_index}: {e}")
+            df.at[row_index, 'defined_input'] = "Invalid JSON"
+
+# ✅ Done: Your cleaned output is now in df['defined_input']
