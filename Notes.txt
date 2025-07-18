@@ -1,30 +1,44 @@
 import pandas as pd
-from ragas.dataset_schema import SingleTurnSample
-from ragas.metrics import SemanticSimilarity
-from ragas.embeddings import LangchainEmbeddingsWrapper
+import ast
 
-# Set up your embedding wrapper (assumes you already have evaluator_embedding)
-embedding_wrapper = LangchainEmbeddingsWrapper(evaluator_embedding)
-scorer = SemanticSimilarity(embeddings=embedding_wrapper)
+# Get unique claim_data values
+unique_claims = df['claim_data'].unique()
 
-# Example dataframe (or use your own)
-# df = pd.read_csv("your_file.csv")  # if you're loading from a file
-# Make sure these column names match your actual dataframe
-# For example:
-# df.columns = ["evidence_run1", "evidence_run2"]
+# Loop through each claim_data
+for claim in unique_claims:
+    # Filter all rows for this claim
+    claim_rows = df[df['claim_data'] == claim]
 
-# Loop through rows and compute the semantic similarity
-scores = []
-for i, row in df.iterrows():
-    sample = SingleTurnSample(
-        response=row["evidence_run1"],
-        reference=row["evidence_run2"]
-    )
-    score = scorer.single_turn_score(sample)
-    scores.append(score)
+    # Loop through each row for this claim
+    for idx, row in claim_rows.iterrows():
+        input_raw = row['input']
+        keyword = row['keyword']
 
-# Add result to the dataframe
-df["ragas_semanticsimilarity"] = scores
+        try:
+            # Try to parse the input as a list of dicts
+            parsed_json = ast.literal_eval(input_raw)
 
-# Done! You can display or save the dataframe now
-print(df)
+            # Check if it's a list of messages with 'role' and 'content'
+            if isinstance(parsed_json, list) and all(isinstance(item, dict) for item in parsed_json):
+                user_contents = [item['content'] for item in parsed_json if item.get('role') == 'user']
+
+                # Extract up to 3 user contents
+                user_content_1 = user_contents[0] if len(user_contents) > 0 else None
+                user_content_2 = user_contents[1] if len(user_contents) > 1 else None
+                user_content_3 = user_contents[2] if len(user_contents) > 2 else None
+
+                # Build the overall formatted string
+                overall = ""
+                if user_content_1:
+                    overall += "1. " + user_content_1
+                if user_content_2:
+                    overall += "\n2. " + user_content_2
+                if user_content_3:
+                    overall += "\n3. " + user_content_3
+
+                # Update the input in the DataFrame
+                df.at[idx, 'input'] = overall
+
+        except Exception as e:
+            # If input is not JSON-parsable, skip
+            print(f"Skipping row {idx} for claim {claim}: {e}")
