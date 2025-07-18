@@ -1,5 +1,25 @@
-# at the top of your code
-df['defined_input'] = None
+from ragas.metrics import rouge
+from datasets import Dataset as HFDataset
+import pandas as pd
 
-# inside your loop, after computing 'overall'
-df.loc[matching_row.index[0], 'defined_input'] = overall
+# Sample DataFrame
+# df = pd.read_csv("your_file.csv")  # if loading from CSV
+
+# df should have columns: 'run1' (predicted), 'run2' (reference)
+# Example:
+# df = pd.DataFrame({
+#     'run1': ["Paris is the capital of France."],
+#     'run2': ["The capital of France is Paris."]
+# })
+
+# Prepare a HuggingFace dataset from the DataFrame
+hf_dataset = HFDataset.from_pandas(df.rename(columns={
+    'run1': 'answer',
+    'run2': 'ground_truth'
+}))
+
+# Evaluate using RAGAS's ROUGE metric
+rouge_scores = rouge.evaluate(hf_dataset)
+
+# Add the scores back to the DataFrame
+df['rouge'] = rouge_scores
