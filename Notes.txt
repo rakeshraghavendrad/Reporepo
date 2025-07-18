@@ -1,46 +1,48 @@
 import ast
+import json
 import pandas as pd
 
-# 1. Get all unique claims
-unique_claims = df['claim_data'].unique()
+# Ensure the column exists
+df['defined_input'] = None
 
-# 2. Keyword to filter by
+# Setup
 target_keyword = 'Generated summary of compelling evidence'
 keyword_column = 'keyword'
 input_column = 'input'
-
-# 3. Filter rows by keyword
 mask = df[keyword_column].str.contains(target_keyword, case=False, na=False)
 filtered_rows = df[mask]
+unique_claims = filtered_rows['claim_data'].unique()
 
-# 4. Create new column to store cleaned text
-df['defined_input'] = None
-
-# 5. Loop through each claim
+# Loop through matched claims
 for claim in unique_claims:
     matching_row = filtered_rows[filtered_rows['claim_data'] == claim]
 
     if not matching_row.empty:
-        row_index = matching_row.index[0]  # get exact row index in original df
-        input_json_string = matching_row.iloc[0][input_column]
+        row_index = matching_row.index[0]
+        input_text = matching_row.iloc[0][input_column]
 
+        parsed_json = None
         try:
-            # Safely parse the JSON-like string
-            parsed_json = ast.literal_eval(input_json_string)
+            # First try ast.literal_eval
+            parsed_json = ast.literal_eval(input_text)
+        except Exception:
+            try:
+                # Try JSON loads (ensure it's a valid string)
+                parsed_json = json.loads(input_text.replace("'", '"'))
+            except Exception as e:
+                print(f"Row {row_index}: Failed to parse input: {e}")
+                df.at[row_index, 'defined_input'] = 'Invalid input'
+                continue
 
-            # Get only 'user' role messages
+        # Proceed only if it's a list of dicts
+        if isinstance(parsed_json, list):
             user_contents = [item['content'] for item in parsed_json if item.get('role') == 'user']
 
-            # Format with 1., 2., 3.
+            # Format numbered output
             formatted = ""
             for i, content in enumerate(user_contents[:3]):
-                formatted += f"{i+1}. {content}\n"
+                formatted += f"{i+1}. {content.strip()}\n"
 
-            # Assign to new column
             df.at[row_index, 'defined_input'] = formatted.strip()
-
-        except Exception as e:
-            print(f"Error parsing row {row_index}: {e}")
-            df.at[row_index, 'defined_input'] = "Invalid JSON"
-
-# ✅ Done: Your cleaned output is now in df['defined_input']
+        else:
+            df.at[row_index, 'defined_input'] = 'Parsed content not list'
