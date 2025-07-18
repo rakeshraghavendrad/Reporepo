@@ -1,33 +1,47 @@
 import ast
+import pandas as pd
 
+# Sample: unique claims
+unique_claims = df['claim_data'].unique()
+
+# Your target keyword
 target_keyword = 'Generated summary of compelling evidence'
 keyword_column = 'keyword'
 input_column = 'input'
 
+# Step 1: Create a mask for rows that contain the target keyword
 mask = df[keyword_column].str.contains(target_keyword, case=False, na=False)
-filtered_rows = df[mask]
-unique_claims = df['claim_data'].unique()
 
+# Step 2: Loop through each claim
 for claim in unique_claims:
-    matching_row = filtered_rows[filtered_rows['claim_data'] == claim]
+    # Get rows matching the current claim AND keyword
+    matching_row = df[(df['claim_data'] == claim) & mask]
 
     if not matching_row.empty:
+        # Extract the input column JSON string
         input_json_string = matching_row.iloc[0][input_column]
-        print("Found matching input:")
-        
-        # Safely parse JSON-like string
+        print("Found matching input.")
+
+        # Parse the JSON string
         parsed_json = ast.literal_eval(input_json_string)
-        
-        # Extract only 'user' role contents
+
+        # Extract 'user' role content
         user_contents = [item['content'] for item in parsed_json if item.get('role') == 'user']
 
-        # Assign only if enough contents
-        user_content_1 = user_contents[0] if len(user_contents) > 0 else ''
-        user_content_2 = user_contents[1] if len(user_contents) > 1 else ''
-        user_content_3 = user_contents[2] if len(user_contents) > 2 else ''
+        # Extract up to 3 content segments
+        user_content_1 = user_contents[0] if len(user_contents) > 0 else None
+        user_content_2 = user_contents[1] if len(user_contents) > 1 else None
+        user_content_3 = user_contents[2] if len(user_contents) > 2 else None
 
-        # Safe concatenation (skip empty strings)
-        overall = "\n\n".join(filter(None, [user_content_1, user_content_2, user_content_3]))
+        # Build the cleaned overall content
+        overall = ""
+        if user_content_1:
+            overall += "1. " + user_content_1
+        if user_content_2:
+            overall += "\n2. " + user_content_2
+        if user_content_3:
+            overall += "\n3. " + user_content_3
 
-        # Update original dataframe
-        df.loc[df[keyword_column] == target_keyword, input_column] = overall
+        # Step 3: Update ONLY the matching row's input column
+        row_index = matching_row.index[0]  # Use .index to find row in original df
+        df.loc[row_index, input_column] = overall
