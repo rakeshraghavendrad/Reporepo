@@ -1,48 +1,5 @@
-import ast
-import json
-import pandas as pd
-
-# Ensure the column exists
+# at the top of your code
 df['defined_input'] = None
 
-# Setup
-target_keyword = 'Generated summary of compelling evidence'
-keyword_column = 'keyword'
-input_column = 'input'
-mask = df[keyword_column].str.contains(target_keyword, case=False, na=False)
-filtered_rows = df[mask]
-unique_claims = filtered_rows['claim_data'].unique()
-
-# Loop through matched claims
-for claim in unique_claims:
-    matching_row = filtered_rows[filtered_rows['claim_data'] == claim]
-
-    if not matching_row.empty:
-        row_index = matching_row.index[0]
-        input_text = matching_row.iloc[0][input_column]
-
-        parsed_json = None
-        try:
-            # First try ast.literal_eval
-            parsed_json = ast.literal_eval(input_text)
-        except Exception:
-            try:
-                # Try JSON loads (ensure it's a valid string)
-                parsed_json = json.loads(input_text.replace("'", '"'))
-            except Exception as e:
-                print(f"Row {row_index}: Failed to parse input: {e}")
-                df.at[row_index, 'defined_input'] = 'Invalid input'
-                continue
-
-        # Proceed only if it's a list of dicts
-        if isinstance(parsed_json, list):
-            user_contents = [item['content'] for item in parsed_json if item.get('role') == 'user']
-
-            # Format numbered output
-            formatted = ""
-            for i, content in enumerate(user_contents[:3]):
-                formatted += f"{i+1}. {content.strip()}\n"
-
-            df.at[row_index, 'defined_input'] = formatted.strip()
-        else:
-            df.at[row_index, 'defined_input'] = 'Parsed content not list'
+# inside your loop, after computing 'overall'
+df.loc[matching_row.index[0], 'defined_input'] = overall
