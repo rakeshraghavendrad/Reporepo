@@ -1,25 +1,38 @@
-from ragas.metrics import rouge
-from datasets import Dataset as HFDataset
 import pandas as pd
+from rouge import Rouge
 
-# Sample DataFrame
-# df = pd.read_csv("your_file.csv")  # if loading from CSV
+# Sample DataFrame structure
+# Replace this with your actual dataframe
+df = pd.DataFrame({
+    'evidence_run1': [
+        "The cat sat on the mat.",
+        "The billing address matches the cardholder."
+    ],
+    'evidence_run2': [
+        "A cat was sitting on the mat.",
+        "The cardholder address matches the order."
+    ]
+})
 
-# df should have columns: 'run1' (predicted), 'run2' (reference)
-# Example:
-# df = pd.DataFrame({
-#     'run1': ["Paris is the capital of France."],
-#     'run2': ["The capital of France is Paris."]
-# })
+rouge = Rouge()
 
-# Prepare a HuggingFace dataset from the DataFrame
-hf_dataset = HFDataset.from_pandas(df.rename(columns={
-    'run1': 'answer',
-    'run2': 'ground_truth'
-}))
+# Functions to extract F, P, R for each ROUGE type
+def get_rouge_scores(row):
+    scores = rouge.get_scores(row['evidence_run1'], row['evidence_run2'])[0]
+    return pd.Series({
+        'rouge1_f': scores['rouge-1']['f'],
+        'rouge1_p': scores['rouge-1']['p'],
+        'rouge1_r': scores['rouge-1']['r'],
+        'rouge2_f': scores['rouge-2']['f'],
+        'rouge2_p': scores['rouge-2']['p'],
+        'rouge2_r': scores['rouge-2']['r'],
+        'rougel_f': scores['rouge-l']['f'],
+        'rougel_p': scores['rouge-l']['p'],
+        'rougel_r': scores['rouge-l']['r'],
+    })
 
-# Evaluate using RAGAS's ROUGE metric
-rouge_scores = rouge.evaluate(hf_dataset)
+# Apply to each row and join with original DataFrame
+df = df.join(df.apply(get_rouge_scores, axis=1))
 
-# Add the scores back to the DataFrame
-df['rouge'] = rouge_scores
+# Show final dataframe
+print(df)
