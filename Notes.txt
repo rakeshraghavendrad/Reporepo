@@ -1,38 +1,65 @@
 import pandas as pd
-from rouge import Rouge
+from collections import Counter
 
-# Sample DataFrame structure
-# Replace this with your actual dataframe
-df = pd.DataFrame({
-    'evidence_run1': [
-        "The cat sat on the mat.",
-        "The billing address matches the cardholder."
-    ],
-    'evidence_run2': [
-        "A cat was sitting on the mat.",
-        "The cardholder address matches the order."
-    ]
-})
+def lcs(X, Y):
+    """Compute length of Longest Common Subsequence between two word lists"""
+    m, n = len(X), len(Y)
+    dp = [[0] * (n + 1) for _ in range(m + 1)]
 
-rouge = Rouge()
+    for i in range(m):
+        for j in range(n):
+            if X[i] == Y[j]:
+                dp[i+1][j+1] = dp[i][j] + 1
+            else:
+                dp[i+1][j+1] = max(dp[i][j+1], dp[i+1][j])
+    return dp[m][n]
 
-# Functions to extract F, P, R for each ROUGE type
-def get_rouge_scores(row):
-    scores = rouge.get_scores(row['evidence_run1'], row['evidence_run2'])[0]
-    return pd.Series({
-        'rouge1_f': scores['rouge-1']['f'],
-        'rouge1_p': scores['rouge-1']['p'],
-        'rouge1_r': scores['rouge-1']['r'],
-        'rouge2_f': scores['rouge-2']['f'],
-        'rouge2_p': scores['rouge-2']['p'],
-        'rouge2_r': scores['rouge-2']['r'],
-        'rougel_f': scores['rouge-l']['f'],
-        'rougel_p': scores['rouge-l']['p'],
-        'rougel_r': scores['rouge-l']['r'],
-    })
+def rouge_scores(candidate, reference):
+    """
+    Compute ROUGE-1 and ROUGE-L (F1) scores for a single pair of texts.
+    Both inputs are strings.
+    """
+    cand_tokens = candidate.lower().split()
+    ref_tokens = reference.lower().split()
 
-# Apply to each row and join with original DataFrame
-df = df.join(df.apply(get_rouge_scores, axis=1))
+    # ROUGE-1
+    cand_counter = Counter(cand_tokens)
+    ref_counter = Counter(ref_tokens)
+    overlap = sum((cand_counter & ref_counter).values())
 
-# Show final dataframe
-print(df)
+    precision_1 = overlap / len(cand_tokens) if cand_tokens else 0
+    recall_1 = overlap / len(ref_tokens) if ref_tokens else 0
+    f1_1 = (2 * precision_1 * recall_1) / (precision_1 + recall_1) if (precision_1 + recall_1) else 0
+
+    # ROUGE-L
+    lcs_len = lcs(cand_tokens, ref_tokens)
+    precision_l = lcs_len / len(cand_tokens) if cand_tokens else 0
+    recall_l = lcs_len / len(ref_tokens) if ref_tokens else 0
+    f1_l = (2 * precision_l * recall_l) / (precision_l + recall_l) if (precision_l + recall_l) else 0
+
+    return {
+        'rouge1_f1': round(f1_1, 4),
+        'rougeL_f1': round(f1_l, 4)
+    }
+
+def compute_rouge_df(df, pred_col='prediction', ref_col='reference'):
+    """
+    Compute ROUGE-1 and ROUGE-L F1 scores for each row in a DataFrame.
+    Adds new columns to the DataFrame with the scores.
+    """
+    scores = df.apply(lambda row: rouge_scores(row[pred_col], row[ref_col]), axis=1, result_type='expand')
+    return df.join(scores)
+
+
+
+# Example dataframe
+data = {
+    "prediction": ["the cat is on the mat", "there is a cat on the mat"],
+    "reference": ["a cat sits on the mat", "the cat is playing on the mat"]
+}
+df = pd.DataFrame(data)
+
+# Compute ROUGE scores
+scored_df = compute_rouge_df(df)
+print(scored_df)
+
