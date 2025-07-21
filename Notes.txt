@@ -1,65 +1,14 @@
-import pandas as pd
-from collections import Counter
+Subject: Clarification on Vertex AI Embeddings and Alternative Options
 
-def lcs(X, Y):
-    """Compute length of Longest Common Subsequence between two word lists"""
-    m, n = len(X), len(Y)
-    dp = [[0] * (n + 1) for _ in range(m + 1)]
+Hi Ryan,
 
-    for i in range(m):
-        for j in range(n):
-            if X[i] == Y[j]:
-                dp[i+1][j+1] = dp[i][j] + 1
-            else:
-                dp[i+1][j+1] = max(dp[i][j+1], dp[i+1][j])
-    return dp[m][n]
+Thanks for sharing the Gemini 1.2 model endpoints. I’ve started using them and am currently evaluating semantic similarity using RAGAS.
 
-def rouge_scores(candidate, reference):
-    """
-    Compute ROUGE-1 and ROUGE-L (F1) scores for a single pair of texts.
-    Both inputs are strings.
-    """
-    cand_tokens = candidate.lower().split()
-    ref_tokens = reference.lower().split()
+At the moment, I’m leveraging Vertex AI embeddings to compute sentence embeddings for scoring. However, I understand that using Vertex AI embeddings requires specific roles and access keys.
 
-    # ROUGE-1
-    cand_counter = Counter(cand_tokens)
-    ref_counter = Counter(ref_tokens)
-    overlap = sum((cand_counter & ref_counter).values())
+Looking ahead, I see that the model endpoints will start returning results in the coming weeks.
 
-    precision_1 = overlap / len(cand_tokens) if cand_tokens else 0
-    recall_1 = overlap / len(ref_tokens) if ref_tokens else 0
-    f1_1 = (2 * precision_1 * recall_1) / (precision_1 + recall_1) if (precision_1 + recall_1) else 0
+In the meantime, are there any alternative methods or workarounds to generate embeddings without relying on Vertex AI? If so, could you please share a sample implementation?
 
-    # ROUGE-L
-    lcs_len = lcs(cand_tokens, ref_tokens)
-    precision_l = lcs_len / len(cand_tokens) if cand_tokens else 0
-    recall_l = lcs_len / len(ref_tokens) if ref_tokens else 0
-    f1_l = (2 * precision_l * recall_l) / (precision_l + recall_l) if (precision_l + recall_l) else 0
-
-    return {
-        'rouge1_f1': round(f1_1, 4),
-        'rougeL_f1': round(f1_l, 4)
-    }
-
-def compute_rouge_df(df, pred_col='prediction', ref_col='reference'):
-    """
-    Compute ROUGE-1 and ROUGE-L F1 scores for each row in a DataFrame.
-    Adds new columns to the DataFrame with the scores.
-    """
-    scores = df.apply(lambda row: rouge_scores(row[pred_col], row[ref_col]), axis=1, result_type='expand')
-    return df.join(scores)
-
-
-
-# Example dataframe
-data = {
-    "prediction": ["the cat is on the mat", "there is a cat on the mat"],
-    "reference": ["a cat sits on the mat", "the cat is playing on the mat"]
-}
-df = pd.DataFrame(data)
-
-# Compute ROUGE scores
-scored_df = compute_rouge_df(df)
-print(scored_df)
-
+Best regards,
+[Your Name]
