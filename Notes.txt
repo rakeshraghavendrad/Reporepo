@@ -1,14 +1,3 @@
-Subject: Clarification on Vertex AI Embeddings and Alternative Options
-
-Hi Ryan,
-
-Thanks for sharing the Gemini 1.2 model endpoints. I’ve started using them and am currently evaluating semantic similarity using RAGAS.
-
-At the moment, I’m leveraging Vertex AI embeddings to compute sentence embeddings for scoring. However, I understand that using Vertex AI embeddings requires specific roles and access keys.
-
-Looking ahead, I see that the model endpoints will start returning results in the coming weeks.
-
-In the meantime, are there any alternative methods or workarounds to generate embeddings without relying on Vertex AI? If so, could you please share a sample implementation?
-
-Best regards,
-[Your Name]
+df['ragas_min'] = df.groupby('merchant')['ragas semantic similarity'].transform('min')
+df['ragas_max'] = df.groupby('merchant')['ragas semantic similarity'].transform('max')
+df['ragas_mean'] = df.groupby('merchant')['ragas semantic similarity'].transform('mean')
