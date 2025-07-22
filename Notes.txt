@@ -1,3 +1,22 @@
-df['ragas_min'] = df.groupby('merchant')['ragas semantic similarity'].transform('min')
-df['ragas_max'] = df.groupby('merchant')['ragas semantic similarity'].transform('max')
-df['ragas_mean'] = df.groupby('merchant')['ragas semantic similarity'].transform('mean')
+import sys
+import os
+import importlib
+
+# ✅ 1. Path to your local source code
+custom_code_path = "/aimlp_work/workspaces/notebook_data_dir/AI-Coe-310-Gen-AI-Pod1/AI-Coe-310-Gen-AI-Pod1/c976ca07-a762-4b79-81f3-0a9d95eba683/Jupyter-6-0-0-4669/notebooks/sourcecde"
+
+# ✅ 2. Add this path to sys.path
+if custom_code_path not in sys.path:
+    sys.path.insert(0, custom_code_path)
+
+# ✅ 3. Remove the site-packages path if it's conflicting
+site_pkg_path = "/aimlp_app/ibm/spectrum/miniconda/mini23101/anaconda/envs/osds_py310_Genai_v3/lib/python3.10/site-packages"
+if site_pkg_path in sys.path:
+    sys.path.remove(site_pkg_path)
+
+# ✅ 4. Reload the module to ensure it's not cached from earlier
+import sourcecde.bert_score
+importlib.reload(sourcecde.bert_score)
+
+# ✅ 5. Confirm you're using the correct path
+print("bert_score path:", sourcecde.bert_score.__file__)
