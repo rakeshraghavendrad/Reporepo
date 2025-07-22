@@ -1,4 +1,15 @@
 import sys
+import types
+
+# ✅ Force Python to load local transformers module
+import sourcecde.transformers as local_transformers
+sys.modules['transformers'] = local_transformers
+
+
+
+
+
+import sys
 import os
 import importlib
 
