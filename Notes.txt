@@ -1,4 +1,15 @@
-import sys
+
+	•	Connect with Ryan to clarify the flow taken up by the Agent.
+	•	For MRM, the expected sample size is 32 to ensure all categories are adequately covered.
+	•	We are expected to have the implementation testing results available.
+	•	To check the reproducibility rate, AICOE will rerun the same samples and compare results with the LOB tech team.
+	•	Agent notes and decisions will be recorded in Splunk. However, they are not currently appearing. Michel will debug this with the claims team, and an update is expected early next week.
+	•	Ryan has yet to review the shared PDF files.
+	•	Regarding the feedback loop:
+	•	If a summary is rejected, confirm whether it is stored in a Pega table.
+	•	Mich will address this and close the loop.
+	•	Agents will provide feedback during the Gen-AI step to rate the LLM-generated summaries.
+	•	Ryan will also provide Agent’s notes for the 30 cases.import sys
 import types
 
 # ✅ Force Python to load local transformers module
