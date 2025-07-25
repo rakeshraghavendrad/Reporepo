@@ -1,7 +1,13 @@
 import re
+import json
 
-# Remove code block markers and optional 'json' prefix
-cleaned_response = re.sub(r"^```(?:json)?\s*|\s*```$", "", response_text.strip())
+# Remove code fences and language identifiers
+cleaned_response = re.sub(r"^```(?:json)?\n|```$", "", response_text.strip(), flags=re.DOTALL)
 
-# Parse cleaned JSON
-json_result = json.loads(cleaned_response)
+try:
+    json_result = json.loads(cleaned_response)
+    return schema(**json_result)
+except json.JSONDecodeError:
+    print("⚠️ Model output is not valid JSON. Returning raw response instead.")
+    print(response_text)
+    return response_text
