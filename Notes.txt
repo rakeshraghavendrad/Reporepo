@@ -1,1 +1,7 @@
-"Assess contextual precision by determining how accurately the generated output aligns with the semantic context of the input while remaining consistent with the actual output."
+import re
+
+# Remove code block markers and optional 'json' prefix
+cleaned_response = re.sub(r"^```(?:json)?\s*|\s*```$", "", response_text.strip())
+
+# Parse cleaned JSON
+json_result = json.loads(cleaned_response)
