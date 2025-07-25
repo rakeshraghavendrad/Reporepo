@@ -1,34 +1,28 @@
-The actual JSON is valid, but the surrounding text:
-1. Starts with `Exception in threading.excepthook:`
-2. Contains fenced code block markers (```````json` and ``````)
-3. Has stray newlines and dots afterward.
+import pandas as pd
+import re
 
-`strip()` can’t handle that because:
-- It only removes characters from the start/end, not whole substrings.
-- The extra message at the top (`Exception in threading.excepthook:`) breaks the JSON completely.
+# Example: Load your CSV file
+df = pd.read_csv("30_case_comparison_release_candidate_v0_2_0_results.csv")
 
----
+# Function to clean text
+def clean_text(text):
+    if pd.isna(text):
+        return ""
+    # Remove \n and \t
+    text = text.replace("\n", " ").replace("\t", " ")
+    # Remove square brackets and anything inside []
+    text = re.sub(r'\[.*?\]', '', text)
+    # Remove double and single quotes
+    text = text.replace('"', '').replace("'", "")
+    # Remove multiple spaces
+    text = re.sub(r'\s+', ' ', text)
+    # Strip leading and trailing spaces
+    return text.strip()
 
-### Here’s a **working cleaning function** for your case:
+# Apply to the 'NewSummary' column
+df['Cleaned_NewSummary'] = df['NewSummary'].apply(clean_text)
 
-```python
-import re, json
+# Save the cleaned file
+df.to_csv("cleaned_results.csv", index=False)
 
-def clean_json_response(response_text):
-    # Remove any leading exception text
-    response_text = re.sub(r'^.*?(\{)', r'\1', response_text, flags=re.S)  # Keep only from first '{'
-    
-    # Remove markdown code fences (``` or ```json)
-    response_text = re.sub(r'```(?:json)?', '', response_text).strip()
-    
-    # Remove any trailing dots or weird newlines
-    response_text = re.sub(r'\.+$', '', response_text).strip()
-
-    return json.loads(response_text)
-
-# Usage
-try:
-    json_result = clean_json_response(response_text)
-except Exception as e:
-    print("Failed to parse JSON:", e)
-    print("Raw output:", response_text)
+print(df[['NewSummary', 'Cleaned_NewSummary']].head())
