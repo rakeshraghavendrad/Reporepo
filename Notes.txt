@@ -1,1 +1,1 @@
-"Verify whether the generated output is consistent and faithful when compared to both the reference output and the actual system output."
+"Assess contextual precision by determining how accurately the generated output aligns with the semantic context of the input while remaining consistent with the actual output."
