@@ -1,3 +1,15 @@
-json_result = json.loads(
-    response_text.replace("```json", "").replace("```", "").split("Exception in threading.excepthook:")[-1].strip()
-)
+# Clean the response before parsing
+clean_text = response_text
+
+# 1. Remove "Exception in threading.excepthook:" if present
+if "Exception in threading.excepthook:" in clean_text:
+    clean_text = clean_text.split("Exception in threading.excepthook:")[-1]
+
+# 2. Remove code fences explicitly
+clean_text = clean_text.replace("```json", "").replace("```", "").strip()
+
+# 3. Remove trailing dots
+clean_text = clean_text.rstrip(".")
+
+# Now load JSON
+json_result = json.loads(clean_text)
