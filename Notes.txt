@@ -1,15 +1,182 @@
-# Clean the response before parsing
-clean_text = response_text
+import os
+import json
+import uuid
+import datetime
+import logging
+import re
+from typing import Optional, Dict, Any, Union
+from deep_eval.models.base import BaseModel, DeepEvalBaseLLM
+import httpx
 
-# 1. Remove "Exception in threading.excepthook:" if present
-if "Exception in threading.excepthook:" in clean_text:
-    clean_text = clean_text.split("Exception in threading.excepthook:")[-1]
 
-# 2. Remove code fences explicitly
-clean_text = clean_text.replace("```json", "").replace("```", "").strip()
+class LLMRequestError(Exception):
+    """Custom exception for LLM request errors"""
 
-# 3. Remove trailing dots
-clean_text = clean_text.rstrip(".")
+    def __init__(self, message: str, status_code: Optional[int] = None, response_text: Optional[str] = None):
+        self.status_code = status_code
+        self.response_text = response_text
+        super().__init__(f"{message} | Status: {status_code}, Response: {response_text}")
 
-# Now load JSON
-json_result = json.loads(clean_text)
+
+class CustomOpenAILLM(DeepEvalBaseLLM):
+    """
+    A custom LLM class that implements OpenAI-compatible endpoints for DeepEval.
+    """
+
+    def __init__(
+        self,
+        bearer_token: str,
+        model_name: str = "gemini-2.0-flash-001",  # or "gemini-2.5-pro-preview-03-25"
+        base_url: Optional[str] = None,
+        temperature: float = 0.7,
+        max_tokens: int = 8192,
+        verify_ssl: bool = True,
+        debug: bool = False
+    ):
+        self.bearer_token = bearer_token
+        self.model_name = model_name
+        self.base_url = base_url
+        self.temperature = min(max(temperature, 0.0), 1.0)  # Clamp between 0 and 1
+        self.max_tokens = max_tokens
+        self.verify_ssl = verify_ssl
+
+        if debug:
+            logging.basicConfig(level=logging.DEBUG)
+            self.logger = logging.getLogger(__name__)
+        else:
+            self.logger = logging.getLogger(__name__)
+            self.logger.setLevel(logging.WARNING)
+
+    def _prepare_request_payload(self, prompt: str) -> Dict[str, Any]:
+        """Prepare the request payload"""
+        return {
+            "model": self.model_name,
+            "messages": [{"role": "user", "content": prompt}],
+            "temperature": self.temperature,
+            "max_tokens": self.max_tokens,
+        }
+
+    def _create_headers(self):
+        """Prepare request headers"""
+        HTTP_REQUEST_ID = str(uuid.uuid4())
+        UTC_TIME_STAMP = str(datetime.datetime.now().isoformat())
+        CORRELATION_ID = str(uuid.uuid4())
+
+        CLIENT_ID = os.environ.get("APP_ID", "k052484")
+        USECASE_ID = os.environ.get("TACHYON_USECASE_ID")
+        TACHYON_API_KEY = os.environ.get("TACHYON_API_KEY")
+
+        headers = {
+            "x-request-id": HTTP_REQUEST_ID,
+            "x-wf-request-date": UTC_TIME_STAMP,
+            "x-correlation-id": CORRELATION_ID,
+            "x-wf-client-id": CLIENT_ID,
+            "x-wf-usecase-id": f"{USECASE_ID}",
+            "x-wf-api-key": f"{TACHYON_API_KEY}",
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {self.bearer_token}"
+        }
+
+        return headers
+
+    def _handle_response(self, response: httpx.Response) -> str:
+        """Handle the API response and extract the content"""
+        try:
+            response_data = response.json()
+            self.logger.debug(f"Response data: {response_data}")
+
+            if not response.is_success:
+                raise LLMRequestError("Request failed", status_code=response.status_code, response_text=response.text)
+
+            if "choices" not in response_data or not response_data["choices"]:
+                raise LLMRequestError("No choices in response", status_code=response.status_code, response_text=response.text)
+
+            if "message" not in response_data["choices"][0]:
+                if "text" in response_data["choices"][0]:
+                    return response_data["choices"][0]["text"]
+                raise LLMRequestError("Unexpected response format", status_code=response.status_code, response_text=response.text)
+
+            return response_data["choices"][0]["message"]["content"]
+
+        except json.JSONDecodeError:
+            raise LLMRequestError("Invalid JSON response", status_code=response.status_code, response_text=response.text)
+
+    def load_model(self) -> 'CustomOpenAILLM':
+        """Required by DeepEval"""
+        return self
+
+    def get_model_name(self) -> str:
+        """Required by DeepEval"""
+        return self.model_name
+
+    def _clean_json_output(self, response_text: str) -> str:
+        """
+        Clean model output by removing markdown code fences and optional 'json' prefix
+        """
+        return re.sub(r"^```(?:json)?\s*|\s*```$", "", response_text.strip())
+
+    def generate(self, prompt: str, schema: Optional[BaseModel] = None) -> Union[str, BaseModel]:
+        """Generate a response from the LLM"""
+        self.logger.debug(f"Generating response for prompt: {prompt}")
+
+        headers = self._create_headers()
+        payload = self._prepare_request_payload(prompt)
+
+        try:
+            with httpx.Client(verify=self.verify_ssl) as client:
+                response = client.post(
+                    f"{self.base_url}/chat/completions",
+                    headers=headers,
+                    json=payload,
+                    timeout=30.0
+                )
+
+                response_text = self._handle_response(response)
+
+                if schema:
+                    try:
+                        cleaned = self._clean_json_output(response_text)
+                        json_result = json.loads(cleaned)
+                        return schema(**json_result)
+                    except json.JSONDecodeError:
+                        print("⚠️ Model output is not valid JSON. Returning raw response instead.")
+                        print(response_text)
+                        return response_text
+
+                return response_text
+
+        except httpx.RequestError as e:
+            raise LLMRequestError(f"Request failed: {str(e)}")
+
+    async def a_generate(self, prompt: str, schema: Optional[BaseModel] = None) -> Union[str, BaseModel]:
+        """Generate a response from the LLM asynchronously"""
+        self.logger.debug(f"Generating async response for prompt: {prompt}")
+
+        headers = self._create_headers()
+        payload = self._prepare_request_payload(prompt)
+
+        try:
+            async with httpx.AsyncClient(verify=self.verify_ssl) as client:
+                response = await client.post(
+                    f"{self.base_url}/chat/completions",
+                    headers=headers,
+                    json=payload,
+                    timeout=30.0
+                )
+
+                response_text = self._handle_response(response)
+
+                if schema:
+                    try:
+                        cleaned = self._clean_json_output(response_text)
+                        json_result = json.loads(cleaned)
+                        return schema(**json_result)
+                    except json.JSONDecodeError:
+                        print("⚠️ Model output is not valid JSON. Returning raw response instead.")
+                        print(response_text)
+                        return response_text
+
+                return response_text
+
+        except httpx.RequestError as e:
+            raise LLMRequestError(f"Async request failed: {str(e)}")
