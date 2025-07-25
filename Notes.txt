@@ -1,9 +1,10 @@
-from deep_eval.metrics import ContextualPrecisionMetric
+# Override prompt template to force score + reason output
+ContextualPrecisionMetric_metric.prompt_template = """
+You are evaluating contextual precision between the expected output and the actual output.
 
-# Initialize Contextual Precision metric with custom instructions
-ContextualPrecisionMetric_metric = ContextualPrecisionMetric(
-    threshold=0.7,
-    model=llm_no_ssl,
-    include_reason=True,
-    prompt_template="Return JSON with numeric 'score' (0 to 1) and 'reason'. Example: {\"score\":0.85,\"reason\":\"Context is precise with minor omissions.\"}"
-)
+Return strictly in JSON format:
+{
+  "score": <float between 0 and 1>,
+  "reason": "<brief explanation of why this score>"
+}
+"""
