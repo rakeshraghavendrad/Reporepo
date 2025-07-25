@@ -1,28 +1,32 @@
 import pandas as pd
 import re
 
-# Example: Load your CSV file
+# Load your CSV
 df = pd.read_csv("30_case_comparison_release_candidate_v0_2_0_results.csv")
 
-# Function to clean text
 def clean_text(text):
     if pd.isna(text):
         return ""
-    # Remove \n and \t
-    text = text.replace("\n", " ").replace("\t", " ")
-    # Remove square brackets and anything inside []
+    # Convert to string (in case of numbers or NaN)
+    text = str(text)
+    # Remove all newline types (\n, \r, \\n)
+    text = re.sub(r'(\\n|\\r|\\r\\n|\n|\r)+', ' ', text)
+    # Remove anything inside square brackets [ ... ]
     text = re.sub(r'\[.*?\]', '', text)
-    # Remove double and single quotes
-    text = text.replace('"', '').replace("'", "")
+    # Remove quotes (single, double, and fancy ones)
+    text = re.sub(r'[\"“”‘’\']', '', text)
+    # Replace tabs with space
+    text = text.replace('\t', ' ')
     # Remove multiple spaces
     text = re.sub(r'\s+', ' ', text)
     # Strip leading and trailing spaces
     return text.strip()
 
-# Apply to the 'NewSummary' column
+# Apply to your column
 df['Cleaned_NewSummary'] = df['NewSummary'].apply(clean_text)
 
-# Save the cleaned file
+# Save cleaned results
 df.to_csv("cleaned_results.csv", index=False)
 
-print(df[['NewSummary', 'Cleaned_NewSummary']].head())
+# Preview a few rows
+print(df[['NewSummary', 'Cleaned_NewSummary']].head(5))
