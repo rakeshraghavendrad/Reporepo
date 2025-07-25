@@ -1,3 +1,39 @@
+def apply_ContextualPrecisionMetric(row):
+    test_case = LLMTestCase(
+        input="Check if the output is contextual and precise.",
+        actual_output=row["NewSummary"],
+        expected_output=row["Agentnotes"],
+        retrieval_context=[row["Agentcontext"]]
+    )
+
+    # Run the metric
+    result = ContextualPrecisionMetric_metric.measure(test_case)
+
+    # Clean and parse JSON result (if needed)
+    if isinstance(result, str):
+        try:
+            cleaned = re.sub(r"^```(?:json)?\s*|\s*```$", "", result.strip())
+            parsed = json.loads(cleaned)
+            score = parsed.get("verdicts", [{}])[0].get("verdict")
+            reason = parsed.get("verdicts", [{}])[0].get("reason")
+        except Exception:
+            score = None
+            reason = result  # fallback to raw text
+    else:
+        score = getattr(ContextualPrecisionMetric_metric, "score", None)
+        reason = getattr(ContextualPrecisionMetric_metric, "reason", None)
+
+    return pd.Series({
+        "ContextualPrecisionMetric_score": score,
+        "ContextualPrecisionMetric_reason": reason
+    })
+
+
+
+
+
+
+
 import os
 import json
 import uuid
