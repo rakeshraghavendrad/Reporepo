@@ -1,10 +1,27 @@
-# Override prompt template to force score + reason output
-ContextualPrecisionMetric_metric.prompt_template = """
-You are evaluating contextual precision between the expected output and the actual output.
+def apply_ContextualPrecisionMetric(row):
+    test_case = LLMTestCase(
+        input="Check if the output is contextual and precise.",
+        actual_output=row["NewSummary"],
+        expected_output=row["Agentnotes"],
+        retrieval_context=[row["Agentcontext"]]
+    )
 
-Return strictly in JSON format:
-{
-  "score": <float between 0 and 1>,
-  "reason": "<brief explanation of why this score>"
-}
-"""
+    result = ContextualPrecisionMetric_metric.measure(test_case)
+
+    score, reason = None, None
+    if isinstance(result, str):
+        try:
+            cleaned = re.sub(r"^```(?:json)?\s*|\s*```$", "", result.strip())
+            parsed = json.loads(cleaned)
+            score = parsed.get("score")
+            reason = parsed.get("reason")
+        except Exception:
+            reason = result
+    else:
+        score = getattr(ContextualPrecisionMetric_metric, "score", None)
+        reason = getattr(ContextualPrecisionMetric_metric, "reason", None)
+
+    return pd.Series({
+        "ContextualPrecisionMetric_score": score,
+        "ContextualPrecisionMetric_reason": reason
+    })
