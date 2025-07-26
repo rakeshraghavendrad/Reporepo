@@ -1,76 +1,53 @@
-import json
-import re
-from deep_eval.metrics.base import BaseMetric
-from deep_eval.test_case import LLMTestCase
+from deepeval.metrics.contextual_precision.template import ContextualPrecisionTemplate
 
-
-class CustomContextualPrecisionMetric(BaseMetric):
+class CustomPrecisionTemplate(ContextualPrecisionTemplate):
     """
-    Custom Contextual Precision Metric that outputs score (0-1) and reason,
-    instead of DeepEval's default verdict structure.
+    Overrides only the prompt logic to return score + reason JSON
+    instead of default verdicts.
     """
-
-    def __init__(self, model, threshold: float = 0.7, include_reason: bool = True):
-        self.model = model
-        self.threshold = threshold
-        self.include_reason = include_reason
-
-        # Prompt ensures consistent JSON output
-        self.prompt_template = """
+    @staticmethod
+    def generate_verdicts(input: str, expected_output: str, retrieval_context: list):
+        # Single unified prompt
+        return f"""
 Evaluate how contextually precise the 'actual output' is compared to the 'expected output' 
 using the given retrieval context.
 
 Return strictly in JSON format:
-{
+{{
   "score": <float between 0 and 1>,
   "reason": "<concise explanation>"
-}
+}}
 Score should reflect contextual precision (1 = fully precise, 0 = not precise).
-"""
-
-    def measure(self, test_case: LLMTestCase):
-        # Construct prompt
-        prompt = f"""
-{self.prompt_template}
 
 Expected Output:
-{test_case.expected_output}
+{expected_output}
 
 Actual Output:
-{test_case.actual_output}
+{input}
 
 Context:
-{test_case.retrieval_context}
+{retrieval_context}
 """
 
-        # Call LLM
-        response = self.model.generate(prompt)
-
-        # Clean JSON
-        cleaned = re.sub(r"^```(?:json)?\s*|\s*```$", "", response.strip())
-        try:
-            parsed = json.loads(cleaned)
-            self.score = parsed.get("score")
-            self.reason = parsed.get("reason") if self.include_reason else None
-        except Exception:
-            self.score = None
-            self.reason = response  # fallback raw
-
-        return json.dumps({"score": self.score, "reason": self.reason})
+    @staticmethod
+    def generate_reason(input: str, verdicts: list, score: str):
+        # Return reason directly from previous JSON
+        return f"Reason: {verdicts[0]['reasons'] if verdicts else 'No reason provided'}"
 
 
 
+from deepeval.metrics import ContextualPrecisionMetric
 
-
-
-ContextualPrecisionMetric_metric = CustomContextualPrecisionMetric(
-    model=llm_no_ssl,
+metric = ContextualPrecisionMetric(
     threshold=0.7,
-    include_reason=True
+    model=llm_no_ssl,  # your CustomOpenAILLM
+    evaluation_template=CustomPrecisionTemplate
 )
 
 
-
+import pandas as pd
+import json
+from deepeval.test_case import LLMTestCase
 
 def apply_ContextualPrecisionMetric(row):
     test_case = LLMTestCase(
@@ -80,11 +57,16 @@ def apply_ContextualPrecisionMetric(row):
         retrieval_context=[row["Agentcontext"]]
     )
 
-    result = ContextualPrecisionMetric_metric.measure(test_case)
+    # Measure returns score (float)
+    score = metric.measure(test_case)
+    reason = metric.reason  # populated internally
 
-    # Parse result (already JSON)
-    parsed = json.loads(result)
     return pd.Series({
-        "ContextualPrecisionMetric_score": parsed.get("score"),
-        "ContextualPrecisionMetric_reason": parsed.get("reason")
+        "ContextualPrecisionMetric_score": score,
+        "ContextualPrecisionMetric_reason": reason
     })
+
+# Example usage
+df[["ContextualPrecisionMetric_score", "ContextualPrecisionMetric_reason"]] = df.apply(
+    apply_ContextualPrecisionMetric, axis=1
+)
