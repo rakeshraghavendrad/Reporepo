@@ -1,65 +1,29 @@
-from typing import List, Dict
+def _generate_verdicts(
+    self, input: str, expected_output: str, retrieval_context: List[str]
+):
+    prompt = self.evaluation_template.generate_verdicts(
+        input=input,
+        expected_output=expected_output,
+        retrieval_context=retrieval_context,
+    )
 
-
-class ContextualPrecisionTemplate:
-    @staticmethod
-    def generate_verdicts(
-        input: str, expected_output: str, retrieval_context: List[str]
-    ):
-        document_count_str = f" ({len(retrieval_context)} document{'s' if len(retrieval_context) > 1 else ''})"
-        return f"""
-Given the input, expected output, and retrieval context, evaluate how contextually precise the actual output is compared to the expected output.
-
-**Return STRICTLY in JSON format:**
-{{
-    "score": <float between 0 and 1>,
-    "reason": "<short explanation of why this score was assigned>"
-}}
-
-Guidelines:
-- Score `1` means perfect contextual precision (high relevance and ranking).
-- Score `0` means completely irrelevant.
-- Use the retrieval_context to justify the score in the reason.
-
-Input:
-{input}
-
-Expected Output:
-{expected_output}
-
-Retrieval Context{document_count_str}:
-{retrieval_context}
-
-JSON:
-"""
-
-    @staticmethod
-    def generate_reason(
-        input: str, score: float, verdicts: List[Dict[str, str]]
-    ):
-        # Even though "verdicts" is passed in, treat it as contextual info for reasoning
-        return f"""
-Given the input, retrieval context, and contextual precision score, summarize concisely why this score was assigned.
-
-**Return STRICTLY in JSON format:**
-{{
-    "reason": "The score is {score} because <concise explanation referencing context>."
-}}
-
-Guidelines:
-- Mention why irrelevant context reduced the score (if applicable).
-- Highlight why relevant parts justified the current score.
-- Do not mention 'verdict'; treat them as relevant or irrelevant context.
-- Keep explanation concise.
-
-Input:
-{input}
-
-Contextual Precision Score:
-{score}
-
-Retrieval Contexts:
-{verdicts}
-
-JSON:
-"""
+    if self.using_native_model:
+        res, cost = self.model.generate(prompt, schema=ContextualPrecisionScore)
+        self.evaluation_cost += cost
+        self.score = res.score
+        self.reason = res.reason
+        return []  # no verdicts used anymore
+    else:
+        try:
+            res: ContextualPrecisionScore = self.model.generate(
+                prompt, schema=ContextualPrecisionScore
+            )
+            self.score = res.score
+            self.reason = res.reason
+            return []
+        except TypeError:
+            res = self.model.generate(prompt)
+            data = trimAndLoadJson(res, self)
+            self.score = data["score"]
+            self.reason = data["reason"]
+            return []
