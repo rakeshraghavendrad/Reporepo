@@ -1,3 +1,11 @@
+
+merged_df = pd.concat([df_rouge1, df_rouges], axis=1)
+merged_df = merged_df.loc[:, ~merged_df.columns.duplicated()]
+
+
+
+
+
 def _generate_verdicts(
     self, input: str, expected_output: str, retrieval_context: List[str]
 ):
