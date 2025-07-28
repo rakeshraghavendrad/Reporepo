@@ -1,72 +1,65 @@
-from deepeval.metrics.contextual_precision.template import ContextualPrecisionTemplate
+from typing import List, Dict
 
-class CustomPrecisionTemplate(ContextualPrecisionTemplate):
-    """
-    Overrides only the prompt logic to return score + reason JSON
-    instead of default verdicts.
-    """
+
+class ContextualPrecisionTemplate:
     @staticmethod
-    def generate_verdicts(input: str, expected_output: str, retrieval_context: list):
-        # Single unified prompt
+    def generate_verdicts(
+        input: str, expected_output: str, retrieval_context: List[str]
+    ):
+        document_count_str = f" ({len(retrieval_context)} document{'s' if len(retrieval_context) > 1 else ''})"
         return f"""
-Evaluate how contextually precise the 'actual output' is compared to the 'expected output' 
-using the given retrieval context.
+Given the input, expected output, and retrieval context, evaluate how contextually precise the actual output is compared to the expected output.
 
-Return strictly in JSON format:
+**Return STRICTLY in JSON format:**
 {{
-  "score": <float between 0 and 1>,
-  "reason": "<concise explanation>"
+    "score": <float between 0 and 1>,
+    "reason": "<short explanation of why this score was assigned>"
 }}
-Score should reflect contextual precision (1 = fully precise, 0 = not precise).
+
+Guidelines:
+- Score `1` means perfect contextual precision (high relevance and ranking).
+- Score `0` means completely irrelevant.
+- Use the retrieval_context to justify the score in the reason.
+
+Input:
+{input}
 
 Expected Output:
 {expected_output}
 
-Actual Output:
-{input}
-
-Context:
+Retrieval Context{document_count_str}:
 {retrieval_context}
+
+JSON:
 """
 
     @staticmethod
-    def generate_reason(input: str, verdicts: list, score: str):
-        # Return reason directly from previous JSON
-        return f"Reason: {verdicts[0]['reasons'] if verdicts else 'No reason provided'}"
+    def generate_reason(
+        input: str, score: float, verdicts: List[Dict[str, str]]
+    ):
+        # Even though "verdicts" is passed in, treat it as contextual info for reasoning
+        return f"""
+Given the input, retrieval context, and contextual precision score, summarize concisely why this score was assigned.
 
+**Return STRICTLY in JSON format:**
+{{
+    "reason": "The score is {score} because <concise explanation referencing context>."
+}}
 
+Guidelines:
+- Mention why irrelevant context reduced the score (if applicable).
+- Highlight why relevant parts justified the current score.
+- Do not mention 'verdict'; treat them as relevant or irrelevant context.
+- Keep explanation concise.
 
-from deepeval.metrics import ContextualPrecisionMetric
+Input:
+{input}
 
-metric = ContextualPrecisionMetric(
-    threshold=0.7,
-    model=llm_no_ssl,  # your CustomOpenAILLM
-    evaluation_template=CustomPrecisionTemplate
-)
+Contextual Precision Score:
+{score}
 
+Retrieval Contexts:
+{verdicts}
 
-import pandas as pd
-import json
-from deepeval.test_case import LLMTestCase
-
-def apply_ContextualPrecisionMetric(row):
-    test_case = LLMTestCase(
-        input="Evaluate contextual precision and return score + reason",
-        actual_output=row["NewSummary"],
-        expected_output=row["Agentnotes"],
-        retrieval_context=[row["Agentcontext"]]
-    )
-
-    # Measure returns score (float)
-    score = metric.measure(test_case)
-    reason = metric.reason  # populated internally
-
-    return pd.Series({
-        "ContextualPrecisionMetric_score": score,
-        "ContextualPrecisionMetric_reason": reason
-    })
-
-# Example usage
-df[["ContextualPrecisionMetric_score", "ContextualPrecisionMetric_reason"]] = df.apply(
-    apply_ContextualPrecisionMetric, axis=1
-)
+JSON:
+"""
