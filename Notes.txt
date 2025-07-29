@@ -3,3 +3,9 @@ self._generate_score_and_reason(
     test_case.expected_output,
     test_case.retrieval_context,
 )
+
+await self._a_generate_score_and_reason(
+    test_case.input,
+    test_case.expected_output,
+    test_case.retrieval_context,
+)
