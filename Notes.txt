@@ -1,36 +1,5 @@
-def _generate_score_and_reason(
-    self, input: str, expected_output: str, retrieval_context: List[str]
-):
-    # Build the prompt using new template
-    prompt = self.evaluation_template.generate_score_and_reason(
-        input=input,
-        expected_output=expected_output,
-        retrieval_context=retrieval_context,
-    )
-
-    # Call model and validate JSON using schema
-    res: ContextualPrecisionScore = self.model.generate(
-        prompt, schema=ContextualPrecisionScore
-    )
-
-    # Store values
-    self.score = res.score
-    self.reason = res.reason
-    return self.score
-
-async def _a_generate_score_and_reason(
-    self, input: str, expected_output: str, retrieval_context: List[str]
-):
-    prompt = self.evaluation_template.generate_score_and_reason(
-        input=input,
-        expected_output=expected_output,
-        retrieval_context=retrieval_context,
-    )
-
-    res: ContextualPrecisionScore = await self.model.a_generate(
-        prompt, schema=ContextualPrecisionScore
-    )
-
-    self.score = res.score
-    self.reason = res.reason
-    return self.score
+self._generate_score_and_reason(
+    test_case.input,
+    test_case.expected_output,
+    test_case.retrieval_context,
+)
