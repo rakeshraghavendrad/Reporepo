@@ -14,53 +14,16 @@ def _generate_reason(self, input: str):
     )
 
     if self.using_native_model:
-        res, cost = self.model.generate(
-            prompt, schema=ContextualPrecisionScoreReason
-        )
+        res, cost = self.model.generate(prompt, schema=ContextualPrecisionVerdict)
         self.evaluation_cost += cost
-        return {"reason": res.reason, "score": self.score}  # Include score
+        return {"verdict": "yes", "reason": res.reason, "score": self.score}
     else:
         try:
-            res: ContextualPrecisionScoreReason = self.model.generate(
-                prompt, schema=ContextualPrecisionScoreReason
+            res: ContextualPrecisionVerdict = self.model.generate(
+                prompt, schema=ContextualPrecisionVerdict
             )
-            return {"reason": res.reason, "score": self.score}  # Include score
+            return {"verdict": "yes", "reason": res.reason, "score": self.score}
         except TypeError:
             res = self.model.generate(prompt)
             data = trimAndLoadJson(res, self)
-            return {"reason": data["reason"], "score": self.score}  # Include score
-
-async def _a_generate_reason(self, input: str):
-    if self.include_reason is False:
-        return None
-
-    retrieval_contexts_verdicts = [
-        {"verdict": verdict.verdict, "reasons": verdict.reason}
-        for verdict in self.verdicts
-    ]
-    prompt = self.evaluation_template.generate_reason(
-        input=input,
-        verdicts=retrieval_contexts_verdicts,
-        score=format(self.score, ".2f"),
-    )
-
-    if self.using_native_model:
-        res, cost = await self.model.a_generate(
-            prompt, schema=ContextualPrecisionScoreReason
-        )
-        self.evaluation_cost += cost
-        return {"reason": res.reason, "score": self.score}  # Include score
-    else:
-        try:
-            res: ContextualPrecisionScoreReason = (
-                await self.model.a_generate(prompt, schema=ContextualPrecisionScoreReason)
-            )
-            return {"reason": res.reason, "score": self.score}  # Include score
-        except TypeError:
-            res = await self.model.a_generate(prompt)
-            data = trimAndLoadJson(res, self)
-            return {"reason": data["reason"], "score": self.score}  # Include score
-
-
-
-
+            return {"verdict": "yes", "reason": data["reason"], "score": self.score}
