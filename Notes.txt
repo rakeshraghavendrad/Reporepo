@@ -1,12 +1,22 @@
 
-merged_df = pd.concat([df_rouge1, df_rouges], axis=1)
-merged_df = merged_df.loc[:, ~merged_df.columns.duplicated()]
+import pandas as pd
 
+file_path = "your_file.xlsx"
 
+# Function to drop unnamed columns
+def drop_unnamed(df):
+    return df.loc[:, ~df.columns.str.contains('^Unnamed')]
 
+# Read Sheet1
+df_sheet1 = pd.read_excel(file_path, sheet_name="Sheet1", engine='openpyxl')
+df_sheet1 = drop_unnamed(df_sheet1)
 
+# Read Sheet2
+df_sheet2 = pd.read_excel(file_path, sheet_name="Sheet2", engine='openpyxl')
+df_sheet2 = drop_unnamed(df_sheet2)
 
-def _generate_verdicts(
+print(df_sheet1.head())
+print(df_sheet2.head())def _generate_verdicts(
     self, input: str, expected_output: str, retrieval_context: List[str]
 ):
     prompt = self.evaluation_template.generate_verdicts(
