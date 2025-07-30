@@ -1,65 +1,126 @@
-Implementation Testing
+from pydantic import BaseModel
 
-Initial testing to be completed in the first week.
+class ContextualPrecisionScore(BaseModel):
+    score: float
+    reason: str
 
-Results expected by the end of next week.
 
-Connor to coordinate with Mike to expedite the process.
+template.py 
 
-Agent Response Issue
 
-Observed: Agent response field is currently returning an empty string.
+from typing import List
 
-Action: Confirm if this is fixed. Connor to check with Mike and update AICOE.
+class ContextualPrecisionTemplate:
+    @staticmethod
+    def generate_score(input: str, expected_output: str, retrieval_context: List[str]):
+        document_count_str = f" ({len(retrieval_context)} document{'s' if len(retrieval_context) > 1 else ''})"
+        return f"""Given the input, expected output, and retrieval context{document_count_str},
+generate a contextual precision SCORE between 0 and 1 and provide a REASON for it.
 
-Additional Fields
+- Score meaning:
+    1.0 = retrieval context perfectly matches expected output
+    0.0 = completely irrelevant
+    Values in between represent partial relevance.
 
-Need to capture additional fields such as merchant or other geographic levels.
+Return strictly in JSON format:
+{{
+  "score": <float between 0 and 1>,
+  "reason": "<concise reason using quotes from context>"
+}}
 
-Claims team to confirm required fields. Connor to validate with Mike.
+Input:
+{input}
 
-UI and Feedback Integration
+Expected Output:
+{expected_output}
 
-Connor to connect with Sriram regarding UI screen updates and adding new fields.
+Retrieval Context:
+{retrieval_context}
 
-Include an additional pager for capturing Agent Feedback.
+JSON:
+"""
 
-Component-Level Summarization
 
-Explore capturing summarization at intermediate steps from AGENT.
 
-Compare these summaries with LLM summarization at corresponding steps.
 
-Standardizing Data Collection
+precision.py 
 
-Suggestion: Utilize UI or surveys for data collection to ensure standardization.
 
-Even SMEs could contribute instead of relying solely on agents.
 
-Subject Matter Expert (SME)
+from deepeval.metrics.contextual_precision.schema import ContextualPrecisionScore
 
-Ryan identified as SME.
+class ContextualPrecisionMetric(BaseMetric):
+    _required_params = [
+        LLMTestCaseParams.INPUT,
+        LLMTestCaseParams.ACTUAL_OUTPUT,
+        LLMTestCaseParams.RETRIEVAL_CONTEXT,
+        LLMTestCaseParams.EXPECTED_OUTPUT,
+    ]
 
-Option to use RYAN’s name for MRM.
+    def measure(self, test_case: LLMTestCase, _show_indicator: bool = True, _in_component: bool = False) -> float:
+        check_llm_test_case_params(test_case, self._required_params, self)
+        self.evaluation_cost = 0 if self.using_native_model else None
 
-Historical Data Access
+        with metric_progress_indicator(self, _show_indicator=_show_indicator, _in_component=_in_component):
+            prompt = self.evaluation_template.generate_score(
+                test_case.input,
+                test_case.expected_output,
+                test_case.retrieval_context
+            )
 
-Retrieve historical agent data and PDFs (if available).
+            if self.using_native_model:
+                res, cost = self.model.generate(prompt, schema=ContextualPrecisionScore)
+                self.evaluation_cost += cost
+                self.score = res.score
+                self.reason = res.reason
+            else:
+                try:
+                    res: ContextualPrecisionScore = self.model.generate(prompt, schema=ContextualPrecisionScore)
+                    self.score = res.score
+                    self.reason = res.reason
+                except TypeError:
+                    res = self.model.generate(prompt)
+                    data = trimAndLoadJson(res, self)
+                    self.score = data["score"]
+                    self.reason = data["reason"]
 
-Jeff to confirm available databases and share relevant details.
+            self.success = self.score >= self.threshold
+            self.verbose_logs = construct_verbose_logs(
+                self,
+                steps=[f"Score: {self.score}\nReason: {self.reason}"]
+            )
+            return self.score
 
-API Metrics Support
+    async def a_measure(self, test_case: LLMTestCase, _show_indicator: bool = True, _in_component: bool = False) -> float:
+        check_llm_test_case_params(test_case, self._required_params, self)
+        self.evaluation_cost = 0 if self.using_native_model else None
 
-Connor to assist in obtaining API metrics:
+        with metric_progress_indicator(self, async_mode=True, _show_indicator=_show_indicator, _in_component=_in_component):
+            prompt = self.evaluation_template.generate_score(
+                test_case.input,
+                test_case.expected_output,
+                test_case.retrieval_context
+            )
 
-API success percentage
+            if self.using_native_model:
+                res, cost = await self.model.a_generate(prompt, schema=ContextualPrecisionScore)
+                self.evaluation_cost += cost
+                self.score = res.score
+                self.reason = res.reason
+            else:
+                try:
+                    res: ContextualPrecisionScore = await self.model.a_generate(prompt, schema=ContextualPrecisionScore)
+                    self.score = res.score
+                    self.reason = res.reason
+                except TypeError:
+                    res = await self.model.a_generate(prompt)
+                    data = trimAndLoadJson(res, self)
+                    self.score = data["score"]
+                    self.reason = data["reason"]
 
-Schema pass percentage
-
-P96 latency
-
-TPS (Transactions Per Second)
-
-Resource utilization
-
-Scalability factors
+            self.success = self.score >= self.threshold
+            self.verbose_logs = construct_verbose_logs(
+                self,
+                steps=[f"Score: {self.score}\nReason: {self.reason}"]
+            )
+            return self.score
