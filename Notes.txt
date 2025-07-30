@@ -1,1 +1,1 @@
-Check if the reference text is accurately reflected in the response. Does the response align with the information, facts, and intent of the reference?
+It appears that the discrepancy between the agent decision and the agent note was how the file was originally shared by the LOB. I've attached the same file here for your reference. I’ll follow up with Rayn on this during our upcoming calls.
