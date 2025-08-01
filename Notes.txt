@@ -1,1 +1,33 @@
-https://www.wellsfargojobs.com/en/jobs/r-459307/lead-software-engineer-gen-ai/?jClickId=74c21a97-779a-4093-bc08-8c0bbab2cc0d&publisher=Linkedin%20Flat%20bid&utm_source=joveo
+import pandas as pd
+
+# Assuming fdf1 is already available and has all the metric columns
+# and merchant column is set (as you did: fdf1['merchant'] = 'apple')
+
+metrics = [
+    'ragas_semanticsimilarity', 'answer_correctness',
+    'rouge1_precision', 'rouge1_recall', 'rouge1_fmeasure',
+    'rougeL_precision', 'rougeL_recall', 'rougeL_fmeasure',
+    'relevance'
+]
+
+# Calculate min, max, and mean for each metric grouped by 'merchant'
+agg_df = fdf1.groupby('merchant')[metrics].agg(['mean', 'min', 'max'])
+
+# Flatten the multi-index columns
+agg_df.columns = [f"{col}_{stat}" for col, stat in agg_df.columns]
+
+# Reset index to get 'merchant' as column
+agg_df.reset_index(inplace=True)
+
+# Reformat to row-wise like your Excel (i.e., each row = mean/min/max)
+rows = ['mean', 'min', 'max']
+restructured_df = pd.DataFrame(columns=['metric'] + metrics)
+
+for row in rows:
+    row_data = {'metric': row}
+    for metric in metrics:
+        row_data[metric] = agg_df[f"{metric}_{row}"].values[0]
+    restructured_df = pd.concat([restructured_df, pd.DataFrame([row_data])], ignore_index=True)
+
+# Final DataFrame: restructured_df will look like your Excel format
+print(restructured_df)
