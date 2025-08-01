@@ -1,17 +1,1 @@
-Achievements: 
-Led the development of diagnostic models to reduce login friction, resulting in $1M annual savings.
-Created a propensity scoring solution, leading to $1.4M in annual savings by improving user engagement and retention.
-Built an entity matching model that improved name-matching in bank transfers, addressing challenges with nicknames and spelling variations, saving $2.4M annually.
-Published a micro-paper on product recommender systems, selected from 400 submissions for an external conference.
-Responsibilities : 
-Directed the design and delivery of advanced machine learning and AI-driven analytics solutions, enabling business units to make faster, data-backed decisions and improve digital engagement for 1.3M+ monthly users.
-Partnered with senior business leaders to identify opportunities where analytics could drive revenue, improve operational efficiency, and mitigate risk, translating complex requirements into scalable solutions.
-Oversaw the development and optimization of enterprise data pipelines (in collaboration with the Power BI team) to track KPIs and performance drivers, ensuring accurate and timely insights for executive reporting.
-Guided the creation and deployment of predictive and propensity models, helping product and marketing teams target low-engagement users, reduce churn, and boost customer retention.
-Led cross-functional teams to implement real-time entity-matching solutions for bank transfers, incorporating Kafka streaming and establishing standardized ML patterns for repeatable development, deployment, and monitoring.
-Directed the design of dashboards, reporting frameworks, and visualization strategies to simplify analytics insights for executives and operational teams, improving decision-making across departments.
-Supervised and mentored analysts and engineers, fostering a high-performing team culture while coaching talent on consultative analytics skills, technical growth, and career development.
-Led the  model sensitivity testing on critical fraud detection systems by directing teams to introduce perturbations to real ID images for image classification models, ensuring reliability and robustness in production environments.
-Led  the development of a GenAI-powered pre-arbitration solution, which summarized policies and merchant claims to provide AI-assisted recommendations to agents, reducing processing time.
-Evaluated model performance using BERTScore, semantic similarity, and ROUGE metrics to ensure reproducibility and accuracy of outputs.
-Initiated and led an AI data security program by implementing Guardrails to prevent sensitive data leakage to LLMs, ensuring compliance with regulatory and risk management standards.
+https://www.wellsfargojobs.com/en/jobs/r-459307/lead-software-engineer-gen-ai/?jClickId=74c21a97-779a-4093-bc08-8c0bbab2cc0d&publisher=Linkedin%20Flat%20bid&utm_source=joveo
