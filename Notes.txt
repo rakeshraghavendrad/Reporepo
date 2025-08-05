@@ -1,33 +1,11 @@
-import pandas as pd
+MRM – 05/08
 
-# Assuming fdf1 is already available and has all the metric columns
-# and merchant column is set (as you did: fdf1['merchant'] = 'apple')
+Log files should be maintained as separate files for each feature.
 
-metrics = [
-    'ragas_semanticsimilarity', 'answer_correctness',
-    'rouge1_precision', 'rouge1_recall', 'rouge1_fmeasure',
-    'rougeL_precision', 'rougeL_recall', 'rougeL_fmeasure',
-    'relevance'
-]
+Splunk logs show processing errors still occurring. During test cases, processing was only 1 or 2 instances. The issue appears to be that the model armor blocks the Tachyon call. Additionally, some data in PDFs is being misinterpreted as credit card numbers. This needs to be corrected.
 
-# Calculate min, max, and mean for each metric grouped by 'merchant'
-agg_df = fdf1.groupby('merchant')[metrics].agg(['mean', 'min', 'max'])
+Mike to coordinate with the Tachyon team to investigate and resolve the processing error.
 
-# Flatten the multi-index columns
-agg_df.columns = [f"{col}_{stat}" for col, stat in agg_df.columns]
+For the 19-claim process, agent notes to be captured for all 19 cases, if applicable.
 
-# Reset index to get 'merchant' as column
-agg_df.reset_index(inplace=True)
-
-# Reformat to row-wise like your Excel (i.e., each row = mean/min/max)
-rows = ['mean', 'min', 'max']
-restructured_df = pd.DataFrame(columns=['metric'] + metrics)
-
-for row in rows:
-    row_data = {'metric': row}
-    for metric in metrics:
-        row_data[metric] = agg_df[f"{metric}_{row}"].values[0]
-    restructured_df = pd.concat([restructured_df, pd.DataFrame([row_data])], ignore_index=True)
-
-# Final DataFrame: restructured_df will look like your Excel format
-print(restructured_df)
+Mike will verify the updated code in claims to gather feedback. The changes have already been implemented in the testing environment, and verification in the non-production environment is scheduled for Thursday. The claims team will provide the estimated time required for production fixes.
