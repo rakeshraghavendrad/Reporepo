@@ -1,11 +1,19 @@
-MRM – 05/08
+Consistency level:
 
-Log files should be maintained as separate files for each feature.
+Outputs across runs share ~66% overlap in words (ROUGE-1).
 
-Splunk logs show processing errors still occurring. During test cases, processing was only 1 or 2 instances. The issue appears to be that the model armor blocks the Tachyon call. Additionally, some data in PDFs is being misinterpreted as credit card numbers. This needs to be corrected.
+Outputs share ~61% overlap in sentence structure/phrasing (ROUGE-L).
 
-Mike to coordinate with the Tachyon team to investigate and resolve the processing error.
+Balance between runs:
 
-For the 19-claim process, agent notes to be captured for all 19 cases, if applicable.
+Precision ≈ Recall in both metrics → no one run is “longer” or “shorter” than others; differences are balanced.
 
-Mike will verify the updated code in claims to gather feedback. The changes have already been implemented in the testing environment, and verification in the non-production environment is scheduled for Thursday. The claims team will provide the estimated time required for production fixes.
+Stability vs. variability:
+
+The system is reasonably stable (common vocabulary is repeated across runs).
+
+But there’s healthy variation in phrasing and ordering, which explains the slightly lower ROUGE-L.
+
+Takeaway:
+
+Runs are not identical but broadly consistent, showing the model is stable while still generating diverse outputs.
