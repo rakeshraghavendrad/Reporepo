@@ -1,19 +1,19 @@
-Consistency level:
+Correctness (0.52): Dev runs get facts right only about half the time.
+→ Risk of factual errors remains significant.
 
-Outputs across runs share ~66% overlap in words (ROUGE-1).
+Semantic Similarity (0.84): Dev runs are usually on the same topic/idea as prod.
+→ They rarely go completely off-track.
 
-Outputs share ~61% overlap in sentence structure/phrasing (ROUGE-L).
+ROUGE (0.39–0.49): Word overlap is low.
+→ Dev runs phrase answers differently, which lowers consistency.
 
-Balance between runs:
+BERTScore (0.71): Despite low word overlap, the underlying meaning matches well.
+→ Shows dev runs are semantically aligned even if they “say it differently.”
 
-Precision ≈ Recall in both metrics → no one run is “longer” or “shorter” than others; differences are balanced.
+Overall:
 
-Stability vs. variability:
+Dev runs sound right and stay on-topic, but factual correctness is only ~52%, which is the main weakness.
 
-The system is reasonably stable (common vocabulary is repeated across runs).
+If your use case requires strict accuracy, dev runs need refinement.
 
-But there’s healthy variation in phrasing and ordering, which explains the slightly lower ROUGE-L.
-
-Takeaway:
-
-Runs are not identical but broadly consistent, showing the model is stable while still generating diverse outputs.
+If semantic variety and flexibility matter more (creative tasks, brainstorming), current results are fairly good.
