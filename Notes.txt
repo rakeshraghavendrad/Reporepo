@@ -1,19 +1,68 @@
-Correctness (0.52): Dev runs get facts right only about half the time.
-→ Risk of factual errors remains significant.
+import dspy
+import pandas as pd
+from sklearn.model_selection import train_test_split
 
-Semantic Similarity (0.84): Dev runs are usually on the same topic/idea as prod.
-→ They rarely go completely off-track.
+# ---------------------------
+# 1. Load your dataframe
+# ---------------------------
+# df = pd.read_csv("claims.csv")  # assuming your data is in CSV
 
-ROUGE (0.39–0.49): Word overlap is low.
-→ Dev runs phrase answers differently, which lowers consistency.
+# Split train/val
+train_df, val_df = train_test_split(df, test_size=0.3, random_state=42)
 
-BERTScore (0.71): Despite low word overlap, the underlying meaning matches well.
-→ Shows dev runs are semantically aligned even if they “say it differently.”
+# ---------------------------
+# 2. Define the task signature
+# ---------------------------
+class ClaimDecision(dspy.Signature):
+    """Decide whether to Accept or Decline a claim based on merchant document"""
+    merchant_document = dspy.InputField(desc="The extracted claim text from merchant PDF")
+    decision = dspy.OutputField(desc="Final decision: Accept or Decline")
 
-Overall:
+# ---------------------------
+# 3. Define your DSPy module
+# ---------------------------
+class ClaimModule(dspy.Module):
+    def __init__(self, initial_prompt=None):
+        super().__init__()
+        # Seed with your existing prompt text (so optimizer starts from your baseline)
+        self.predict = dspy.Predict(ClaimDecision, prompt=initial_prompt)
+    
+    def forward(self, merchant_document):
+        return self.predict(merchant_document=merchant_document)
 
-Dev runs sound right and stay on-topic, but factual correctness is only ~52%, which is the main weakness.
+# ---------------------------
+# 4. Convert dataframe to train/val sets
+# ---------------------------
+trainset = [
+    {"merchant_document": row["merchant_document"], "decision": row["decision_SME"]}
+    for _, row in train_df.iterrows()
+]
 
-If your use case requires strict accuracy, dev runs need refinement.
+valset = [
+    {"merchant_document": row["merchant_document"], "decision": row["decision_SME"]}
+    for _, row in val_df.iterrows()
+]
 
-If semantic variety and flexibility matter more (creative tasks, brainstorming), current results are fairly good.
+# ---------------------------
+# 5. Run DSPy optimizer
+# ---------------------------
+optimizer = dspy.BootstrapFewShot(metric=dspy.metrics.accuracy)
+
+# Use the first initial prompt as a seed (you could also average or concatenate)
+initial_prompt = train_df["initial_prompt"].iloc[0]
+
+trained_module = optimizer.compile(
+    ClaimModule(initial_prompt=initial_prompt),
+    trainset=trainset,
+    valset=valset
+)
+
+# ---------------------------
+# 6. Evaluate
+# ---------------------------
+acc = dspy.evaluate.accuracy(trained_module, valset)
+print(f"Validation Accuracy: {acc:.2f}")
+
+# Example prediction
+example = trained_module(merchant_document=val_df["merchant_document"].iloc[0])
+print("Prediction:", example.decision)
