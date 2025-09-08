@@ -27,3 +27,7 @@ col_importance_df = col_importance_df.sort_values(by="importance_score", ascendi
 
 print("Column importance wrt SME decision:")
 print(col_importance_df)
+
+
+
+df[['initial_prompt','merchant_document','reason']].apply(lambda col: col.str.len()).corr()
