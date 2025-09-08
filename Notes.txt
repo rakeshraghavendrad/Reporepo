@@ -1,68 +1,29 @@
-import dspy
-import pandas as pd
-from sklearn.model_selection import train_test_split
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.linear_model import LogisticRegression
+from sklearn.preprocessing import LabelEncoder
+from sklearn.model_selection import cross_val_score
+import numpy as np
 
-# ---------------------------
-# 1. Load your dataframe
-# ---------------------------
-# df = pd.read_csv("claims.csv")  # assuming your data is in CSV
+# Encode target
+y = LabelEncoder().fit_transform(df['decision_SME'])
 
-# Split train/val
-train_df, val_df = train_test_split(df, test_size=0.3, random_state=42)
-
-# ---------------------------
-# 2. Define the task signature
-# ---------------------------
-class ClaimDecision(dspy.Signature):
-    """Decide whether to Accept or Decline a claim based on merchant document"""
-    merchant_document = dspy.InputField(desc="The extracted claim text from merchant PDF")
-    decision = dspy.OutputField(desc="Final decision: Accept or Decline")
-
-# ---------------------------
-# 3. Define your DSPy module
-# ---------------------------
-class ClaimModule(dspy.Module):
-    def __init__(self, initial_prompt=None):
-        super().__init__()
-        # Seed with your existing prompt text (so optimizer starts from your baseline)
-        self.predict = dspy.Predict(ClaimDecision, prompt=initial_prompt)
+def column_importance(text_series, y):
+    """Return cross-validated accuracy score for one text column"""
+    vectorizer = TfidfVectorizer(stop_words='english', max_features=5000)
+    X = vectorizer.fit_transform(text_series.astype(str))
     
-    def forward(self, merchant_document):
-        return self.predict(merchant_document=merchant_document)
+    clf = LogisticRegression(penalty="l2", solver="liblinear")
+    scores = cross_val_score(clf, X, y, cv=5, scoring="accuracy")
+    return np.mean(scores)
 
-# ---------------------------
-# 4. Convert dataframe to train/val sets
-# ---------------------------
-trainset = [
-    {"merchant_document": row["merchant_document"], "decision": row["decision_SME"]}
-    for _, row in train_df.iterrows()
-]
+# Check importance for each text column
+results = {}
+for col in ["initial_prompt", "merchant_document", "reason"]:
+    results[col] = column_importance(df[col], y)
 
-valset = [
-    {"merchant_document": row["merchant_document"], "decision": row["decision_SME"]}
-    for _, row in val_df.iterrows()
-]
+# Convert to DataFrame for ranking
+col_importance_df = pd.DataFrame.from_dict(results, orient="index", columns=["importance_score"])
+col_importance_df = col_importance_df.sort_values(by="importance_score", ascending=False)
 
-# ---------------------------
-# 5. Run DSPy optimizer
-# ---------------------------
-optimizer = dspy.BootstrapFewShot(metric=dspy.metrics.accuracy)
-
-# Use the first initial prompt as a seed (you could also average or concatenate)
-initial_prompt = train_df["initial_prompt"].iloc[0]
-
-trained_module = optimizer.compile(
-    ClaimModule(initial_prompt=initial_prompt),
-    trainset=trainset,
-    valset=valset
-)
-
-# ---------------------------
-# 6. Evaluate
-# ---------------------------
-acc = dspy.evaluate.accuracy(trained_module, valset)
-print(f"Validation Accuracy: {acc:.2f}")
-
-# Example prediction
-example = trained_module(merchant_document=val_df["merchant_document"].iloc[0])
-print("Prediction:", example.decision)
+print("Column importance wrt SME decision:")
+print(col_importance_df)
