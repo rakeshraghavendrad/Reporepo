@@ -1,33 +1,19 @@
-from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.linear_model import LogisticRegression
-from sklearn.preprocessing import LabelEncoder
-from sklearn.model_selection import cross_val_score
-import numpy as np
+import pandas as pd
 
-# Encode target
-y = LabelEncoder().fit_transform(df['decision_SME'])
+# Example system prompt
+system_prompt = "You are an AI model that classifies merchant documents into decisions with reasons."
 
-def column_importance(text_series, y):
-    """Return cross-validated accuracy score for one text column"""
-    vectorizer = TfidfVectorizer(stop_words='english', max_features=5000)
-    X = vectorizer.fit_transform(text_series.astype(str))
+predictions = []
+for _, row in df.iterrows():
+    user_prompt = f"""
+    Merchant document:
+    {row['merchant_document_extracted']}
+
+    Based on this document, predict the decision (approve/decline/other) 
+    and provide a short reason.
+    """
     
-    clf = LogisticRegression(penalty="l2", solver="liblinear")
-    scores = cross_val_score(clf, X, y, cv=5, scoring="accuracy")
-    return np.mean(scores)
+    predicted = chat_completion("gemini-2.5", system_prompt, user_prompt)
+    predictions.append(predicted)
 
-# Check importance for each text column
-results = {}
-for col in ["initial_prompt", "merchant_document", "reason"]:
-    results[col] = column_importance(df[col], y)
-
-# Convert to DataFrame for ranking
-col_importance_df = pd.DataFrame.from_dict(results, orient="index", columns=["importance_score"])
-col_importance_df = col_importance_df.sort_values(by="importance_score", ascending=False)
-
-print("Column importance wrt SME decision:")
-print(col_importance_df)
-
-
-
-df[['initial_prompt','merchant_document','reason']].apply(lambda col: col.str.len()).corr()
+df["predicted_decision"] = predictions
