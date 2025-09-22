@@ -1,19 +1,65 @@
+import requests
+import json
 import pandas as pd
 
-# Example system prompt
-system_prompt = "You are an AI model that classifies merchant documents into decisions with reasons."
+# Example: load dataframe (replace with your actual df)
+# df = pd.read_csv("your_file.csv")
+
+API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent"
+GCP_ACCESS_TOKEN = "YOUR_ACCESS_TOKEN"
+
+# Headers
+headers = {
+    "Authorization": f"Bearer {GCP_ACCESS_TOKEN}",
+    "Content-Type": "application/json"
+}
+
+# Fixed system/optimised prompt
+optimised_prompt = """
+You are an AI system that evaluates merchant documents. 
+Based on the document text, decide whether to Accept or Decline.
+Only respond with 'Accept' or 'Decline'.
+"""
 
 predictions = []
-for _, row in df.iterrows():
-    user_prompt = f"""
-    Merchant document:
-    {row['merchant_document_extracted']}
 
-    Based on this document, predict the decision (approve/decline/other) 
-    and provide a short reason.
-    """
-    
-    predicted = chat_completion("gemini-2.5", system_prompt, user_prompt)
-    predictions.append(predicted)
+for idx, row in df.iterrows():
+    merchant_text = row["merchant_document_text"]
 
-df["predicted_decision"] = predictions
+    # Payload for Gemini
+    payload = {
+        "contents": [
+            {
+                "role": "user",
+                "parts": [
+                    {
+                        "text": f"{optimised_prompt}\n\nDocument:\n{merchant_text}"
+                    }
+                ]
+            }
+        ],
+        "generationConfig": {
+            "temperature": 0.0,   # deterministic output
+            "maxOutputTokens": 50
+        }
+    }
+
+    # Call API
+    response = requests.post(API_URL, headers=headers, data=json.dumps(payload))
+
+    if response.ok:
+        result = response.json()
+        try:
+            model_output = result['candidates'][0]['content']['parts'][0]['text']
+        except Exception:
+            model_output = "Error parsing response"
+    else:
+        model_output = f"Error: {response.text}"
+
+    predictions.append(model_output.strip())
+
+# Store results in dataframe
+df["Predicted_Decision"] = predictions
+
+# Now df has ground truth Decision and Predicted_Decision
+print(df[["Doc_id", "Decision", "Predicted_Decision"]])
