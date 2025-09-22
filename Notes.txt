@@ -1,65 +1,49 @@
-import requests
-import json
 import pandas as pd
+import json
 
-# Example: load dataframe (replace with your actual df)
-# df = pd.read_csv("your_file.csv")
+def extract_decision_reason(df, output_col="LLM_Output"):
+    """
+    Takes a dataframe with a column containing model outputs
+    and extracts Decision + Reason into separate columns.
+    """
+    decisions = []
+    reasons = []
 
-API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent"
-GCP_ACCESS_TOKEN = "YOUR_ACCESS_TOKEN"
-
-# Headers
-headers = {
-    "Authorization": f"Bearer {GCP_ACCESS_TOKEN}",
-    "Content-Type": "application/json"
-}
-
-# Fixed system/optimised prompt
-optimised_prompt = """
-You are an AI system that evaluates merchant documents. 
-Based on the document text, decide whether to Accept or Decline.
-Only respond with 'Accept' or 'Decline'.
-"""
-
-predictions = []
-
-for idx, row in df.iterrows():
-    merchant_text = row["merchant_document_text"]
-
-    # Payload for Gemini
-    payload = {
-        "contents": [
-            {
-                "role": "user",
-                "parts": [
-                    {
-                        "text": f"{optimised_prompt}\n\nDocument:\n{merchant_text}"
-                    }
-                ]
-            }
-        ],
-        "generationConfig": {
-            "temperature": 0.0,   # deterministic output
-            "maxOutputTokens": 50
-        }
-    }
-
-    # Call API
-    response = requests.post(API_URL, headers=headers, data=json.dumps(payload))
-
-    if response.ok:
-        result = response.json()
+    for text in df[output_col]:
         try:
-            model_output = result['candidates'][0]['content']['parts'][0]['text']
-        except Exception:
-            model_output = "Error parsing response"
-    else:
-        model_output = f"Error: {response.text}"
+            # ✅ If output is strict JSON
+            parsed = json.loads(text)
+            decisions.append(parsed.get("Decision", "").strip())
+            reasons.append(parsed.get("Reason", "").strip())
+        except:
+            # ⚠️ fallback if model returned plain text
+            decision, reason = "", ""
+            if "Accept" in text:
+                decision = "Accept"
+            elif "Decline" in text:
+                decision = "Decline"
+            if "Reason" in text:
+                reason = text.split("Reason")[-1].strip(" :.-")
+            decisions.append(decision)
+            reasons.append(reason)
 
-    predictions.append(model_output.strip())
+    df["Predicted_Decision"] = decisions
+    df["Predicted_Reason"] = reasons
+    return df
 
-# Store results in dataframe
-df["Predicted_Decision"] = predictions
 
-# Now df has ground truth Decision and Predicted_Decision
-print(df[["Doc_id", "Decision", "Predicted_Decision"]])
+# -------------------------------
+# ✅ Example usage
+# -------------------------------
+# Suppose df has a column "LLM_Output" with model responses
+# df = pd.DataFrame({
+#     "Doc_id": [1, 2],
+#     "LLM_Output": [
+#         '{"Decision": "Accept", "Reason": "Document is valid"}',
+#         '{"Decision": "Decline", "Reason": "Incomplete details"}'
+#     ]
+# })
+
+df = extract_decision_reason(df, output_col="LLM_Output")
+
+print(df[["Doc_id", "Predicted_Decision", "Predicted_Reason"]])
