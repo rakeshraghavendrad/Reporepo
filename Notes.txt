@@ -1,1 +1,1 @@
-=IF(OR(LEN(TRIM(A2))=0, LEN(TRIM(I2))=0), "", IF(TRIM(A2)=TRIM(I2), 1, 0))
+=IF(OR(TRIM(A2)="", TRIM(I2)=""), "", IF(TRIM(A2)=TRIM(I2), 1, 0))
