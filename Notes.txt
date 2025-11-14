@@ -1,1 +1,52 @@
-=IF(OR(TRIM(CLEAN(SUBSTITUTE(A2,CHAR(160),"")))="", TRIM(CLEAN(SUBSTITUTE(I2,CHAR(160),"")))=""), "", IF(TRIM(CLEAN(SUBSTITUTE(A2,CHAR(160),"")))=TRIM(CLEAN(SUBSTITUTE(I2,CHAR(160),""))), 1, 0))
+import pandas as pd
+import numpy as np
+from scipy.stats import zscore
+
+# ---------------------------------------------------------
+# 1. Assume your dataframe is called df
+# ---------------------------------------------------------
+# Example structure:
+# df.columns = ["case_id", "answer_correctness", "rouge1fmeasure", 
+#               "rougeLfmeasure", "bertfmeasure"]
+
+# ---------------------------------------------------------
+# 2. Compute Z-Scores for each metric
+# ---------------------------------------------------------
+metrics = ["answer_correctness", "rouge1fmeasure", "rougeLfmeasure", "bertfmeasure"]
+
+df_z = df.copy()
+for m in metrics:
+    df_z[m + "_z"] = zscore(df[m])
+
+# ---------------------------------------------------------
+# 3. Compute Instability Score (sum of absolute Z-scores)
+# ---------------------------------------------------------
+df_z["instability_score"] = df_z[[m + "_z" for m in metrics]].abs().sum(axis=1)
+
+# ---------------------------------------------------------
+# 4. Classify based on statistical rules
+# ---------------------------------------------------------
+# Using Z-score theory:
+# |Z| < 1     → Stable
+# 1 to 2      → Moderate
+# >= 2        → Unstable
+
+def classify(score):
+    if score < 1:
+        return "Stable system"
+    elif score < 2:
+        return "Moderate system"
+    else:
+        return "Unstable system"
+
+df_z["stability_class"] = df_z["instability_score"].apply(classify)
+
+# ---------------------------------------------------------
+# 5. Sort from most unstable → most stable (optional)
+# ---------------------------------------------------------
+df_z = df_z.sort_values("instability_score", ascending=False)
+
+# ---------------------------------------------------------
+# 6. Show final output
+# ---------------------------------------------------------
+df_z.head()
